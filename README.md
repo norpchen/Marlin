@@ -1,7 +1,7 @@
-This version supports Printrboard and Panucatt VersaPanel (with Prinrboard & RAMPS )
+This version supports Printrboard and Panucatt ViKi (with Printrboard & RAMPS )
 last upstream merge 10/12 RC3-81-gbc27d80
 
-To enable VersaPanel support:
+To enable ViKi support:
 1) uncomment #define VERSAPANEL in Configuration.h
 2) download and install LiquidTWI2 http://blog.lincomatic.com/?tag=liquidtwi2
 
