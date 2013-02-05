@@ -288,9 +288,9 @@ const bool Z_ENDSTOPS_INVERTING = true; // set to true to invert the logic of th
 
 //#define ULTIMAKERCONTROLLER //as available from the ultimaker online store.
 //#define ULTIPANEL  //the ultipanel as on thingiverse
-//#define VERSAPANEL // Panucatt ViKi (formerly VersaPanel)
+//#define PANUCATT_VIKI // Panucatt ViKi (formerly VersaPanel)
 
-#ifdef VERSAPANEL
+#ifdef PANUCATT_VIKI
  #define ULTIPANEL
  #define NEWPANEL
  #define MCP23017_LCD // Adafruit RGB LCD compatibles

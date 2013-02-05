@@ -178,7 +178,7 @@ void lcd_init()
   lcd.createChar(4,refresh);
   lcd.createChar(5,folder);
   LCD_MESSAGEPGM(WELCOME_MSG);
-#ifdef VERSAPANEL
+#ifdef PANUCATT_VIKI
   lcd.setBacklight(0);
 #endif
 }
@@ -226,7 +226,7 @@ void lcd_status()
   if (lcd.readButtons() & BUTTON_SELECT)
     buttons |= EN_C;
 #endif
-#ifdef VERSAPANEL
+#ifdef PANUCATT_VIKI
 #define LED_A 0x04
 #define LED_B 0x02
 #define LED_C 0x01

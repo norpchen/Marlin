@@ -324,7 +324,7 @@
     //buttons are directly attached using AUX-2
     #define BTN_EN1 37
     #define BTN_EN2 35
-#ifndef VERSAPANEL
+#ifndef PANUCATT_VIKI
     #define BTN_ENC 31  //the click
 #endif
     
@@ -996,7 +996,7 @@
     //buttons are directly attached using AUX-2
     #define BTN_EN1 11 // PC1
     #define BTN_EN2 12 // PC2
-#ifndef VERSAPANEL
+#ifndef PANUCATT_VIKI
     #define BTN_ENC 31  //the click
 #endif
     
