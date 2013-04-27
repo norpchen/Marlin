@@ -1,3 +1,46 @@
+This is my personal version of Lincomatic's Marlin fork for Printrboards.  I've got a Printrbot Jr 
+that's been heavily modified and this firmware is tailored to it.  However, I did not remove any of the 
+Marlin code for other machines / options, so it may work well on other bots.
+
+I've made the following changes:
+
+* Added support for the SainSmart I2C LCD2004 adapter for HD44780 LCD screens (this requires 
+  Francisco Malpartida's LCD library, which replaces the existing Arduino LCD library.  It is 
+  available at https://bitbucket.org/fmalpartida/new-liquidcrystal/wiki/Home)
+* Context-sensitive status screen displays based on the printer's current mode / activity.  
+  These only work on a 20x4 display -- the existing Marlin support for 16x2 displays is untouched.
+* Job progress tracking and dynamic estimated completion time  
+* Device metrics, saved to EEPROM, recording useful information like total filament used, total 
+  travel by all axes, time powered on, heater usage, etc. Reported on connection to host / M115
+* Temperature cannot be set higher than the maximum temp for each heater.  A five degree grace buffer
+  is allowed before the device does a panic shut-down when overheating.
+* Additional M-commands added:
+	Makerbot codes:
+	   - M300  -- trigger a beep
+	   - M420  -- set RGB mood light / BlinkM I2C RGB LED --  (not fully implemented yet) 
+	Replicator codes: 
+	   - M73   -- set progress % -- will override internal progress calculations if provided by the slicer
+	   - M70   -- Display message on LCD (same as M117, but M117 doesn't work with all hosts) 
+	  
+* More feedback to LCD and Serial port echo.
+* Filesize is reported with the SD card file listings
+* Larger movement buffer and serial host buffers
+
+Specific config.h settings I've changed for my bot:
+* default step rates (my Printrbot has GT2 2mm belts and a M6 threaded rod)
+* maximum temperature increased
+* custom calibrated temperature sensor table
+* Baudrate kicked up to 5000000
+* Switch Y-Stop and E-Stop pins to work around SD card issue.
+
+Things that have NOT changed from Lincomatic's version:
+* Movement and acceleration and stepper control logic
+* Heater control logic (other than the max temperature change) 
+* LCD menus
+
+
+----------------------------------------------------------------------------------
+
 This version supports Printrboard and Panucatt ViKi (with Printrboard & RAMPS )
 last upstream merge 10/12 RC3-81-gbc27d80
 
