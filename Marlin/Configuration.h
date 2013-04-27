@@ -378,6 +378,10 @@ const bool Z_ENDSTOPS_INVERTING = false; // set to true to invert the logic of t
 // SF send wrong arc g-codes when using Arc Point as fillet procedure
 //#define SF_ARC_FIX
 
+ #define BLINK_M
+#ifdef BLINK_M
+#define BLINK_M_ADDR 0x09
+#endif
 #include "Configuration_adv.h"
 #include "thermistortables.h"
 

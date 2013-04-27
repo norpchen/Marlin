@@ -15,10 +15,12 @@ I've made the following changes:
 * Temperature cannot be set higher than the maximum temp for each heater.  A five degree grace buffer
   is allowed before the device does a panic shut-down when overheating.
 * Additional M-commands added:
+
 	Makerbot codes:
 	   - M300  -- trigger a beep
-	   - M420  -- set RGB mood light / BlinkM I2C RGB LED --  (not fully implemented yet) 
-	Replicator codes: 
+	   - M420  -- set RGB mood light / BlinkM I2C RGB LED 
+
+	   Replicator codes: 
 	   - M73   -- set progress % -- will override internal progress calculations if provided by the slicer
 	   - M70   -- Display message on LCD (same as M117, but M117 doesn't work with all hosts) 
 	  

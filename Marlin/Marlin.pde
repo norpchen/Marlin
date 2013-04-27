@@ -33,6 +33,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "EEPROMwrite.h"
 #include "language.h"
 #include "pins_arduino.h"
+#ifdef BLINK_M
+#include "BlinkM_funcs.h"
+#endif
 
 #define VERSION_STRING  "1.1.0"
 
@@ -413,17 +416,11 @@ void setup()
 
 	LCD_INIT;
 
-	state = DEBUG;
-	//	mytone (TONE_PIN,440, 500);
-	/*
+#ifdef BLINK_M
+	BlinkM_begin();
+	setLEDColor(WHITE);
 
-	for (a=40;a<=45;a++)
-	{
-	mytone (a,440, 500);
-	LCD_STATUS;
-	LCD_MESSAGE (String ("TONE: ") + String(a));
-	}
-	*/
+#endif
 	state = WELCOME;
 }
 
@@ -1272,7 +1269,7 @@ void process_commands()
 			codenum = millis();
 			while(isHeatingBed())
 			{
-				if(( millis() - codenum) > 1000 ) //Print Temp Reading every 1 second while heating up.
+				if(( now - codenum) > 1000 ) //Print Temp Reading every 1 second while heating up.
 				{
 					float tt=degHotend(active_extruder);
 					SERIAL_PROTOCOLPGM("T:");
@@ -1282,12 +1279,12 @@ void process_commands()
 					SERIAL_PROTOCOLPGM(" B:");
 					SERIAL_PROTOCOL_F(degBed(),1);
 					SERIAL_PROTOCOLLN("");
-					codenum = millis();
+					codenum =now;
 				}
 				manage_other_tasks();
 			}
 			LCD_MESSAGEPGM(MSG_BED_DONE);
-			previous_millis_cmd = millis();
+			previous_millis_cmd = now;
 #endif
 			break;
 
@@ -2499,11 +2496,34 @@ unsigned long CalculateRemainingTime (float percent_complete,unsigned long elaps
 	return last_time_estimate;
 }
 
+
+
+
 //-------------------------------------------------------------------------------------------------------------------
 // uses I2C RGB LED since we have only one PWM pin available
 // like the BlinkM
 void setLEDColor (int r, int g, int b)
 {
+
+#ifdef BLINK_M
+
+const byte sclPin = 7;  // digital pin 7 wired to 'c' on BlinkM
+const byte sdaPin = 6;  // digital pin 6 wired to 'd' on BlinkM
+const byte pwrPin = 5;  // digital pin 5 wired to '+' on BlinkM
+const byte gndPin = 4;  // digital pin 4 wired to '-' on BlinkM
+	BlinkM_stopScript(BLINK_M_ADDR);
+		
+	BlinkM_fadeToRGB(BLINK_M_ADDR,r,g,b);
+#endif
+/*
+	SERIAL_ECHO_START;
+	SERIAL_ECHO(" R=");
+	SERIAL_ECHO (r);
+	SERIAL_ECHO ("  G=");
+	SERIAL_ECHO(g);
+	SERIAL_ECHO(" B=");
+	SERIAL_ECHOLN(b);
+*/
 }
 
 STATES state = WELCOME;
@@ -2609,12 +2629,12 @@ void UpdateProgressAndState ()
 				case 0:
 					progress_string[1] = String("SPD:");
 					progress_string[1]+=String (feedmultiply);
-					progress_string[1]+="% ";
+					progress_string[1]+="%  ";
 					break;
 				case 1:
 					progress_string[1] = String("FLO:");
 					progress_string[1]+=String (extrudemultiply);
-					progress_string[1]+="% ";
+					progress_string[1]+="%  ";
 					break;
 				case 2:
 					progress_string[1] = String(ftostr((current_position[2]/(JobTime()+1)*3600),3,1)+String("mm/h"));
@@ -2643,7 +2663,7 @@ void UpdateProgressAndState ()
 			return;
 		}
 		else
-			LCD_MESSAGE(String("BLOCKS: ") + String(itostr2(get_buffer_depth())) + String(" MEM:") + String(freeMemory()));
+			LCD_MESSAGE(String("MOVES: ") + String(itostr2(get_buffer_depth())) + String(" MEM:") + String(freeMemory()));
 		// roll thru
 	case HEATING:
 	case SAVING:
