@@ -3,21 +3,32 @@
 #include "Marlin.h"
 #ifdef ULTRA_LCD
 #ifndef MCP23017_LCD
-  #include <LiquidCrystal.h>
+	#ifdef PCF8574T_LCD
+		#include <LiquidCrystal_I2C.h>
+	#else
+		#include <LiquidCrystal.h>
+	#endif
 #endif
   void lcd_status();
   void lcd_init();
   void lcd_status(const char* message);
+  void lcd_status(const String message);
   void beep();
   void buttons_init();
   void buttons_check();
 
-  #define LCD_UPDATE_INTERVAL 100
+  #define LCD_UPDATE_INTERVAL 250
   #define STATUSTIMEOUT 15000
+  
 #ifdef MCP23017_LCD
   extern LiquidTWI2 lcd;
 #else
-  extern LiquidCrystal lcd;
+	#ifdef PCF8574T_LCD
+		 extern LiquidCrystal_I2C lcd;
+	#else
+		 extern LiquidCrystal lcd;
+	#endif
+ 
 #endif
 
   extern volatile char buttons;  //the last checked buttons in a bit array.
@@ -70,6 +81,7 @@
     MainStatus status;
     uint8_t displayStartingRow;
     
+	void displayTemps();
     void showStatus();
     void showMainMenu();
     void showPrepare();
@@ -163,17 +175,12 @@
 
   #define CLICKED false
   #define BLOCK ;
+//	void beep() {};
+
+ 
 #endif 
   
 void lcd_statuspgm(const char* message);
 void lcd_alertstatuspgm(const char* message);
-  
-char *ftostr3(const float &x);
-char *itostr2(const uint8_t &x);
-char *ftostr31(const float &x);
-char *ftostr32(const float &x);
-char *itostr31(const int &xx);
-char *itostr3(const int &xx);
-char *itostr4(const int &xx);
-char *ftostr51(const float &x);
+
 #endif //ULTRALCD

@@ -1929,6 +1929,7 @@ pins
 #endif
 
 #if defined(__AVR_AT90USB1286__)||defined(__AVR_AT90USB1287__)
+// this is what you care about here!
 // SPI
 #define	SCK					DIO9
 #define	MISO				DIO11

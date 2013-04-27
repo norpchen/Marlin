@@ -18,13 +18,25 @@
 
 #define PROTOCOL_VERSION "1.0"
 
+#define MACHINE_NAME "Mendel"
+#define FIRMWARE_URL "http://www.mendel-parts.com"
+
+	
 #if MOTHERBOARD == 7 || MOTHERBOARD == 71
+	#undef MACHINE_NAME
+	#undef FIRMWARE_URL
 	#define MACHINE_NAME "Ultimaker"
 	#define FIRMWARE_URL "http://firmware.ultimaker.com"
-#else
-	#define MACHINE_NAME "Mendel"
-	#define FIRMWARE_URL "http://www.mendel-parts.com"
 #endif
+
+#if MOTHERBOARD == 81
+	#undef MACHINE_NAME
+	#undef FIRMWARE_URL
+	#define MACHINE_NAME "Printrbot"
+	#define FIRMWARE_URL "http://github/norpchen/printrbot-mendel"
+#endif
+	
+
 
 #define STRINGIFY_(n) #n
 #define STRINGIFY(n) STRINGIFY_(n)
@@ -32,7 +44,7 @@
 #if LANGUAGE_CHOICE == 1
 
 // LCD Menu Messages
-	#define WELCOME_MSG MACHINE_NAME " Ready."
+	#define WELCOME_MSG MACHINE_NAME " / " __TIME__
 	#define MSG_SD_INSERTED "Card inserted"
 	#define MSG_SD_REMOVED "Card removed"
 	#define MSG_MAIN " Main \003"
@@ -92,7 +104,7 @@
 	#define MSG_LOAD_EPROM " Load memory"
 	#define MSG_RESTORE_FAILSAFE " Restore Failsafe"
 	#define MSG_REFRESH "\004Refresh"
-	#define MSG_WATCH " Watch   \003"
+	#define MSG_WATCH " Status   \003"
 	#define MSG_PREPARE " Prepare \x7E"
 	#define MSG_PREPARE_ALT " Prepare \003"
 	#define MSG_CONTROL_ARROW " Control \x7E"
@@ -127,8 +139,8 @@
 	#define MSG_WATCHDOG_RESET " Watchdog Reset"
 	#define MSG_SOFTWARE_RESET " Software Reset"
 	#define MSG_MARLIN "Marlin "
-	#define MSG_AUTHOR " | Author: "
-	#define MSG_CONFIGURATION_VER " Last Updated: "
+	#define MSG_AUTHOR " | Author: Lars"
+	#define MSG_CONFIGURATION_VER " Last Updated: " __DATE__ " " __TIME__
 	#define MSG_FREE_MEMORY " Free Memory: "
 	#define MSG_PLANNER_BUFFER_BYTES "  PlannerBufferBytes: "
 	#define MSG_OK "ok"
@@ -148,7 +160,7 @@
 	#define MSG_HEATING_COMPLETE "Heating done."
 	#define MSG_BED_HEATING "Bed Heating."
 	#define MSG_BED_DONE "Bed done."
-	#define MSG_M115_REPORT "FIRMWARE_NAME:Marlin V1; Sprinter/grbl mashup for gen6 FIRMWARE_URL:" FIRMWARE_URL " PROTOCOL_VERSION:" PROTOCOL_VERSION " MACHINE_TYPE:" MACHINE_NAME " EXTRUDER_COUNT:" STRINGIFY(EXTRUDERS) "\n"
+	#define MSG_M115_REPORT "FIRMWARE_NAME:Marlin V1-Printrbot custom; Sprinter/grbl mashup for gen6 \nCOMPILED:"  __DATE__ " " __TIME__  "\nFIRMWARE_URL:" FIRMWARE_URL " \nPROTOCOL_VERSION:" PROTOCOL_VERSION " \nMACHINE_TYPE:" MACHINE_NAME " \nEXTRUDER_COUNT:" STRINGIFY(EXTRUDERS)  "\n"
 	#define MSG_COUNT_X " Count X:"
 	#define MSG_ERR_KILLED "Printer halted. kill() called !!"
 	#define MSG_ERR_STOPPED "Printer stopped due to errors. Fix the error and use M999 to restart!. (Temperature is reset. Set it before restarting)"

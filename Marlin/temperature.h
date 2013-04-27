@@ -82,23 +82,42 @@ FORCE_INLINE float degTargetBed() {
   return analog2tempBed(target_raw_bed);
 };
 
-FORCE_INLINE void setTargetHotend(const float &celsius, uint8_t extruder) {  
+extern  int maxttemp[EXTRUDERS];
+extern  int bed_maxttemp;
+
+
+FORCE_INLINE float setTargetHotend(const float &celsius, uint8_t extruder) { 
+    float c = celsius;
+    if (c > maxttemp[extruder]) 
+    {
+        c = (float) maxttemp[extruder];
+        SERIAL_ECHO("Extruder max temp exceeded.  Forcing limit at ");
+        SERIAL_ECHOLN(maxttemp[extruder]);
+    }
   target_raw[extruder] = temp2analog(celsius, extruder);
 #ifdef PIDTEMP
-  pid_setpoint[extruder] = celsius;
+  pid_setpoint[extruder] = c;
 #endif //PIDTEMP
+    return c;
 };
 
-FORCE_INLINE void setTargetBed(const float &celsius) {  
+FORCE_INLINE float setTargetBed(const float &celsius) { 
+    float c = celsius;
+  if (c > bed_maxttemp) 
+  {
+        c = (float) bed_maxttemp;
+        SERIAL_ECHO("Bed max temp exceeded.  Forcing limit at ");
+        SERIAL_ECHOLN(bed_maxttemp);
+  }
   
-  target_raw_bed = temp2analogBed(celsius);
-	#ifdef PIDTEMPBED
-  pid_setpoint_bed = celsius;
+  target_raw_bed = temp2analogBed(c);
+    #ifdef PIDTEMPBED
+  pid_setpoint_bed = c;
   #elif defined BED_LIMIT_SWITCHING
-    if(celsius>BED_HYSTERESIS)
+    if(c>BED_HYSTERESIS)
     {
-    target_bed_low_temp= temp2analogBed(celsius-BED_HYSTERESIS);
-    target_bed_high_temp= temp2analogBed(celsius+BED_HYSTERESIS);
+    target_bed_low_temp= temp2analogBed(c-BED_HYSTERESIS);
+    target_bed_high_temp= temp2analogBed(c+BED_HYSTERESIS);
     }
     else
     { 
@@ -106,6 +125,7 @@ FORCE_INLINE void setTargetBed(const float &celsius) {
       target_bed_high_temp=0;
     }
   #endif
+  return c;
 };
 
 FORCE_INLINE bool isHeatingHotend(uint8_t extruder){  

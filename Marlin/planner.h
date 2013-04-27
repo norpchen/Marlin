@@ -91,6 +91,7 @@ extern float max_z_jerk;
 extern float max_e_jerk;
 extern float mintravelfeedrate;
 extern unsigned long axis_steps_per_sqr_second[NUM_AXIS];
+int get_buffer_depth ();
 
 #ifdef AUTOTEMP
     extern bool autotemp_enabled;
