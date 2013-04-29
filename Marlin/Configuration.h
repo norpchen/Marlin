@@ -1,13 +1,14 @@
 #ifndef CONFIGURATION_H
 #define CONFIGURATION_H
 
-// This configurtion file contains the basic settings.
+// This configuration file contains the basic settings.
 // Advanced settings can be found in Configuration_adv.h
 // BASIC SETTINGS: select your board type, temperature sensor type, axis scaling, and endstop configuration
 
 //User specified version info of THIS file to display in [Pronterface, etc] terminal window during startup.
 //Implementation of an idea by Prof Braino to inform user that any changes made
 //to THIS file by the user have been successfully uploaded into firmware.
+
 #define STRING_VERSION_CONFIG_H __DATE__  // "2013-04-22" //Personal revision number for changes to THIS file.
 #define STRING_CONFIG_H_AUTHOR "lars"  ///Who made the changes.
 
@@ -31,34 +32,31 @@
 // Teensylu = 8
 // Printrboard = 81
 // Gen3+ =9
+
+// report file size with the name when listing the SD Card contents
+#define SHOWFILEBYTES true
+
+// when requesting an SD card status update from the host (M27) -- should it include % done and time estimate?
+#define SHOW_SD_PROGRESS_PERCENT true
+
+
+
 #define MOTHERBOARD 81
 
 #if (MOTHERBOARD == 81) //printrboard
+
 #define SDSUPPORT
-#define SHOWFILEBYTES true
-#define SHOW_SD_PROGRESS_PERCENT true
-#else 
-#define SHOWFILEBYTES false
-#define SHOW_SD_PROGRESS_PERCENT false
-
-
 
 #endif
 
 
-#define RED 255,0,0
-#define GREEN 0,255,0
-#define BLUE 0,0,255
-#define WHITE 255,255,255
-#define OFF 0,0,0
-#define ERROR_COLOR RED
-#define STOP_COLOR 20,20,20
-#define SLEEP_COLOR 0,0,0
 
-// save metrics like total print time to eeprom to track lifetime usage:
+
+// save metrics like total print time to eeprom to track lifetime usage:  this will cause more writes to the flash EEPROM
 #define SAVE_DEVICE_METRICS
+
 // update the EEPROM with statistical metrics  (travel history, time on, etc) 
-#define EEPROM_UPDATE_RATE 300  // fiive minutes -- which works out to  ~10 years at 100,000 write cycles for EEPROM life
+#define EEPROM_UPDATE_RATE 300  // five minutes -- which works out to  ~10 years at 100,000 write cycles for EEPROM life
 
 
 //===========================================================================
@@ -288,7 +286,7 @@ const bool Z_ENDSTOPS_INVERTING = false; // set to true to invert the logic of t
 
 // default settings
 
-#define DEFAULT_AXIS_STEPS_PER_UNIT   {80,80,3200,480}                    // default steps per unit for ultimaker 
+#define DEFAULT_AXIS_STEPS_PER_UNIT   {80,80,3200,480}                    // default steps per unit for printrbot Jr with GT2 XY belts and M6 threaded Z rod 
 #define DEFAULT_MAX_FEEDRATE          {120, 120, 2, 20}    // (mm/sec)    
 #define DEFAULT_MAX_ACCELERATION      {900,900,10,5000}    // X, Y, Z, E maximum start speed for accelerated moves. E default values are good for skeinforge 40+, for older versions raise them a lot.
 
@@ -369,7 +367,7 @@ const bool Z_ENDSTOPS_INVERTING = false; // set to true to invert the logic of t
 #endif
 
 // Increase the FAN pwm frequency. Removes the PWM noise but increases heating in the FET/Arduino
-//#define FAST_PWM_FAN
+// #define FAST_PWM_FAN
 
 // M240  Triggers a camera by emulating a Canon RC-1 Remote
 // Data from: http://www.doc-diy.net/photo/rc-1_hacked/
@@ -378,10 +376,52 @@ const bool Z_ENDSTOPS_INVERTING = false; // set to true to invert the logic of t
 // SF send wrong arc g-codes when using Arc Point as fillet procedure
 //#define SF_ARC_FIX
 
- #define BLINK_M
-#ifdef BLINK_M
+#define BLINK_M
+
 #define BLINK_M_ADDR 0x09
-#endif
+
+// built in scripts
+#define BLINK_M_SCRIPT_DEFAULT			0		// white?red?green?blue?off
+#define BLINK_M_SCRIPT_RGB				1		// RGB red?green?blue
+#define BLINK_M_SCRIPT_WHITE_FLASH		2		
+#define BLINK_M_SCRIPT_RED_FLASH		3		
+#define BLINK_M_SCRIPT_GREEN_FLASH		4		
+#define BLINK_M_SCRIPT_BLUE_FLASH		5		
+#define BLINK_M_SCRIPT_CYAN_FLASH		6		
+#define BLINK_M_SCRIPT_MAGNETA_FLASH	7		
+#define BLINK_M_SCRIPT_YELLOW_FLASH		8		
+#define BLINK_M_SCRIPT_OFF				9		
+#define BLINK_M_SCRIPT_HUE_CYCLE		10		// red?yellow?green?cyan?blue?purple
+#define BLINK_M_SCRIPT_MOODLIGHT		11		// random hue?random hue
+#define BLINK_M_SCRIPT_CANDLE			12		// random yellows
+#define BLINK_M_SCRIPT_WATER			13		// random blues
+#define BLINK_M_SCRIPT_NEON				14		// random oranges and reds
+#define BLINK_M_SCRIPT_SEASONS			15		// spring colors?summer?fall?winter
+#define BLINK_M_SCRIPT_STORM			16		// random blues & purples?white flashes
+#define BLINK_M_SCRIPT_STOPLIGHT		17		// red?green?yellow
+#define BLINK_M_SCRIPT_SOS				18		// morse code S.O.S in white
+
+
+#define BLINK_M_PAUSE_SCRIPT		BLINK_M_SCRIPT_YELLOW_FLASH
+#define BLINK_M_ERROR_SCRIPT		BLINK_M_SCRIPT_RED_FLASH
+#define BLINK_M_HEATING_SCRIPT		BLINK_M_SCRIPT_CANDLE
+#define BLINK_M_DONE_SCRIPT			BLINK_M_SCRIPT_GREEN_FLASH
+#define BLINK_M_SLEEP_SCRIPT		BLINK_M_SCRIPT_MOODLIGHT
+#define BLINK_M_COOLING_SCRIPT		BLINK_M_SCRIPT_WATER
+#define BLINK_M_WELCOME_SCRIPT		BLINK_M_SCRIPT_CYAN_FLASH
+#define BLINK_M_IDLE_SCRIPT		    BLINK_M_SCRIPT_MAGNETA_FLASH
+
+#define RED 255,0,0
+#define YELLOW 255,255,0
+#define GREEN 0,255,0
+#define BLUE 0,0,255
+#define WHITE 255,255,255
+#define OFF 0,0,0
+#define ERROR_COLOR RED
+#define STOP_COLOR 20,20,20
+#define SLEEP_COLOR OFF 
+#define WARNING_COLOR YELLOW
+
 #include "Configuration_adv.h"
 #include "thermistortables.h"
 

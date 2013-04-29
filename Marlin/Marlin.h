@@ -4,9 +4,12 @@
 #ifndef MARLIN_H
 #define MARLIN_H
 
+#define VERSION_STRING  "1.1.0"
+
 #define  HardwareSerial_h // trick to disable the standard HWserial
 
 #define  FORCE_INLINE __attribute__((always_inline)) inline
+
 
 #include <math.h>
 #include <stdio.h>
@@ -20,11 +23,6 @@
 #include  <avr/wdt.h>
 #include  <avr/interrupt.h>
 
-
-
-#include "fastio.h"
-#include "Configuration.h"
-#include "pins.h"
 
 #if ARDUINO >= 100
 #if defined(__AVR_ATmega644P__)
@@ -56,6 +54,17 @@
 #else
 #define MYSERIAL MSerial
 #endif
+
+#include "Configuration.h"
+
+#include "Utility.h"
+
+#include "fastio.h"
+
+#include "pins.h"
+#include "State.h"
+#include "job.h"
+
 
 //this is a unfinsihed attemp to removes a lot of warning messages, see:
 // http://www.avrfreaks.net/index.php?name=PNphpBB2&file=printview&t=57011
@@ -171,7 +180,6 @@ void kill(int fatal=1);
 void Stop();
 
 bool IsStopped();
-void JobDone();
 
 void enquecommand(const char *cmd); //put an ascii command at the end of the current buffer.
 void prepare_arc_move(char isclockwise);
@@ -188,106 +196,16 @@ void setPwmFrequency(uint8_t pin, int val);
 
 extern float homing_feedrate[];
 extern bool axis_relative_modes[];
-extern float current_position[NUM_AXIS] ;
+extern float current_head_position[NUM_AXIS] ;
 extern float add_homeing[3];
 extern float min_pos[3];
 extern float max_pos[3];
 extern unsigned char FanSpeed;
 
-void JobDone();
-
-void setLEDColor (int r, int g, int b);
-unsigned long CalculateRemainingTime (float percent_complete,unsigned long elapsed_time);
-char* EchoTimeSpan (long t, bool shortform=false);
-
 // Handling multiple extruders pins
 extern uint8_t active_extruder;
 
-char *ftostr3(const float &x);
-char *itostr2(const uint8_t &x);
-char *ftostr31(const float &x);
-char *ftostr32(const float &x);
-char *itostr31(const int &xx);
-char *itostr3(const int &xx);
-char *itostr4(const int &xx);
-char *ftostr51(const float &x);
-char *ftostr32a(const float &x);
-char *ftostr(float x,int pre,int post, bool sign=false);
 
-
-extern String progress_string[3];
-
-enum STATES
-{
-	IDLE,
-	PRINTING,
-	SAVING,
-	MOVING,
-	HEATING,
-	RETRACT,
-	EXTRUDE,
-	ERROR,
-	SLEEPING,
-	DONE,
-	PAUSED,
-	WELCOME,
-	DEBUG,
-	MAX_STATES
-};
-
-
-enum CONTROLLER 
-{
-	PANEL,
-	SERIAL_HOST,
-	SDCARD,
-	MAX_CONTROLLERS
-};
-
-
-const char * const CONTROLLER_STRINGS[MAX_CONTROLLERS] =
-{
-	"UI",
-	"USB",
-	"SD"
-};
-
-const char * const STATE_STRINGS[MAX_STATES]=
-{
-	" IDLE   ",
-	"PRINTING",
-	"SD SAVE ",
-	"MOVING  ",
-	"HEATING ",
-	"RETRACT ",
-	"EXTRUDE ",
-	" ERROR  ",
-	" SLEEP  ",
-	" DONE   ",
-	" PAUSED ",
-	"PRINTRBOT" ,
-	""
-};
-
-enum DISPLAYFIELDS 
-{
-	STATE,
-	JOB_TIME,
-	EST_TIME_TO_COMPLETE,
-	TIME_SINCE_POWER_ON,
-	PAUSE_TIMER,
-	BUILD_DATE,
-	BUILD_TIME,
-	MACHINENAME,
-	GCODE_LINE_NUMBER,
-	PERCENT_DONE,
-	MAX_DISPLAYS
-};
-
-
-extern CONTROLLER controller  ;
-
-extern STATES state ;
 extern unsigned long time_of_last_command; 
 
 // data logging for statistics and maintenance
@@ -303,24 +221,16 @@ extern float extruder0_degree_seconds;
 extern float bed_degree_seconds;
 extern float total_filament;
 
-
-extern unsigned long starttime;
-extern unsigned long stoptime;
-extern float job_start_filament;
-
-FORCE_INLINE unsigned long JobTime() { int rv = stoptime-starttime; if (rv >0) return rv; else return 1; };
-
-FORCE_INLINE void error_beep() {} ;
-void JobStart() ;
 void manage_other_tasks();
-
 void DisableAllSteppers();
+
 extern unsigned long last_time_estimate;
 extern unsigned long now;			// cached value of millis() -- should be reasonably recent
 
-FORCE_INLINE bool isActiveState() 
-{ 
-	return (state < ERROR && state > IDLE);
-};
+extern volatile int feedmultiply; //100->1 200->2
+extern volatile int extrudemultiply; //
+extern long gcode_N; //
+
+extern long save_gcode_start;
 
 #endif

@@ -19,10 +19,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "Marlin.h"
+
 #ifdef MCP23017_LCD
 #include <Wire.h>
 #include <LiquidTWI2.h>
 #endif
+
+#include "Job.h"
+#include "State.h"
+#include "Utility.h"
+
 #include "ultralcd.h"
 #include "planner.h"
 #include "stepper.h"
@@ -37,7 +43,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "BlinkM_funcs.h"
 #endif
 
-#define VERSION_STRING  "1.1.0"
+
 
 /*
 This firmware is a mashup between Sprinter and grbl.
@@ -131,10 +137,14 @@ http://reprap.org/pipermail/reprap-dev/2011-May/003323.html
 
 //	added by Lars 4/20/2013
 // M420 - Set RGB mood light
+//			R E B to set RGB values (note: E instead of G!)
+//			P to run BlinkM script #
 // M300 - Beep!
 // M70   display messager (replicator)
 // M72  play selected song / tone
+//		P  = ID
 // M73 set the % done
+//		P = percent done (0-100)
 
 //Stepper Movement Variables
 
@@ -154,7 +164,7 @@ volatile int feedmultiply=100; //100->1 200->2
 int saved_feedmultiply;
 volatile bool feedmultiplychanged=false;
 volatile int extrudemultiply=100; //100->1 200->2
-float current_position[NUM_AXIS] = { 0.0, 0.0, 0.0, 0.0 };
+float current_head_position[NUM_AXIS] = { 0.0, 0.0, 0.0, 0.0 };
 float add_homeing[3]= {0,0,0};
 float min_pos[3] = { X_MIN_POS, Y_MIN_POS, Z_MIN_POS };
 float max_pos[3] = { X_MAX_POS, Y_MAX_POS, Z_MAX_POS };
@@ -176,8 +186,8 @@ static float destination[NUM_AXIS] = {  0.0, 0.0, 0.0, 0.0};
 static float offset[3] = {0.0, 0.0, 0.0};
 static bool home_all_axis = true;
 static float feedrate = 1500.0, next_feedrate, saved_feedrate;
-static long gcode_N, gcode_LastN, Stopped_gcode_LastN = 0;
-String progress_string[3] ;
+long gcode_N, gcode_LastN, Stopped_gcode_LastN = 0;
+	long save_gcode_start ;
 
 static bool relative_mode = false;  //Determines Absolute or Relative Coordinates
 static bool relative_mode_e = false;  //Determines Absolute or Relative E Codes while in Absolute Coordinates mode. E is always relative in Relative Coordinates mode.
@@ -202,14 +212,14 @@ unsigned long total_extruder_time0 =0;
 unsigned long total_extruder_time1 =0;
 unsigned long total_bed_time =0;
 float total_distance[NUM_AXIS];
-float job_distance[NUM_AXIS];
 
 float extruder1_degree_seconds=0;
 float extruder0_degree_seconds=0;
 float bed_degree_seconds=0;
 float total_filament=0;
 
-float job_start_filament;
+#define Stopped (state==ERROR)
+// bool Stopped=false;
 
 //static float tt = 0;
 //static float bt = 0;
@@ -219,15 +229,12 @@ static unsigned long previous_millis_cmd = 0;
 static unsigned long max_inactive_time = 0;	// 15min -- THIS IS BROKEN!!!
 static unsigned long stepper_inactive_time = DEFAULT_STEPPER_DEACTIVE_TIME*1000l;
 
-unsigned long starttime=0;
-unsigned long stoptime=0;
-
+unsigned long time_of_last_command=-1;
+unsigned long now = millis();
 static uint8_t tmp_extruder;
 
-bool Stopped=false;
-
-float percent=0;
-bool we_have_gcode_progress = false;
+static int counter = EEPROM_UPDATE_RATE ;
+static unsigned long last_clock_update = millis();
 
 //===========================================================================
 //=============================ROUTINES=============================
@@ -263,25 +270,6 @@ void serial_echopair_P(const char *s_P, unsigned long v)
 {
 	serialprintPGM(s_P);
 	SERIAL_ECHO(v);
-}
-
-//-------------------------------------------------------------------------------------------------------------------
-extern "C" {
-	extern unsigned int __bss_end;
-	extern unsigned int __heap_start;
-	extern void *__brkval;
-
-	int freeMemory()
-	{
-		int free_memory;
-
-		if((int)__brkval == 0)
-			free_memory = ((int)&free_memory) - ((int)&__bss_end);
-		else
-			free_memory = ((int)&free_memory) - ((int)__brkval);
-
-		return free_memory;
-	}
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -345,22 +333,6 @@ void suicide()
 #endif
 }
 
-void mytone(int pin, int freq, int dur)
-{
-	int a;
-	pinMode(pin, OUTPUT);
-	for (a=0;a<1000;a++)
-	{
-		digitalWrite(pin, 255);
-		//		analogWrite(pin, 255);
-		delay(3);
-		digitalWrite(pin, 0);
-		//		analogWrite(pin, 0);
-		delay(3);
-		LCD_STATUS;
-	}
-}
-
 //-------------------------------------------------------------------------------------------------------------------
 void setup()
 {
@@ -411,24 +383,19 @@ void setup()
 	plan_init();  // Initialize planner;
 	st_init();    // Initialize stepper;
 	wd_init();
+	job.init();
+
 	setup_photpin();
-	job_start_filament = total_filament;
-
 	LCD_INIT;
-
+	SetLEDColor(WHITE);
 #ifdef BLINK_M
 	BlinkM_begin();
-	setLEDColor(WHITE);
-
 #endif
-	state = WELCOME;
+	state.init();
 }
 
-static int counter = EEPROM_UPDATE_RATE ;
-static unsigned long last_clock_update = millis();
-
 //-------------------------------------------------------------------------------------------------------------------
-void loop()
+	void loop()
 {
 	if(buflen < (BUFSIZE-1))
 		get_command();
@@ -449,9 +416,9 @@ void loop()
 			{
 				card.closefile();
 				SERIAL_PROTOCOLLNPGM(MSG_FILE_SAVED);
-				state = DONE;
-				stoptime = millis() / 1000;
-				LCD_MESSAGE ("Upload completed");
+				job.Stop();
+				state = IDLE;
+				LCD_MESSAGEPGMPRI ("Upload completed", USER_MESSAGE_PRIORITY);
 			}
 		}
 		else
@@ -474,7 +441,7 @@ void get_command()
 	while( MYSERIAL.available() > 0  && buflen < BUFSIZE)
 	{
 		serial_char = MYSERIAL.read();
-		controller = SERIAL_HOST;
+		state.SetController (SERIAL_HOST);
 		time_of_last_command = millis();
 		if(serial_char == '\n' ||
 			serial_char == '\r' ||
@@ -547,10 +514,16 @@ void get_command()
 						serial_count = 0;
 						return;
 					}
+
+					
+
+				/*	 this didn't work.  :( 
+
 					if((strstr(cmdbuffer[bufindw], "M117") != NULL))		// some hosts sent M117 without checksum or line number  thank you very much
 					{
 						gcode_LastN++;		// advance the line number by one to avoid the line number mismatch error handling on next line.
-					}
+					}*/
+
 				}
 				if((strstr(cmdbuffer[bufindw], "G") != NULL))
 				{
@@ -561,7 +534,7 @@ void get_command()
 					case 1:
 					case 2:
 					case 3:
-						if(Stopped == false)   // If printer is stopped by an error the G[0-3] codes are ignored.
+						if(!Stopped)   // If printer is stopped by an error the G[0-3] codes are ignored.
 						{
 #ifdef SDSUPPORT
 							if(card.saving)
@@ -571,8 +544,9 @@ void get_command()
 						}
 						else
 						{
-							SERIAL_ERRORLNPGM(MSG_ERR_STOPPED);
-							LCD_MESSAGEPGM(MSG_STOPPED);
+// 							SERIAL_ERRORLNPGM(MSG_ERR_STOPPED);
+// 							LCD_MESSAGEPGM(MSG_STOPPED);
+							Warning (MSG_STOPPED);
 						}
 						break;
 					default:
@@ -608,7 +582,7 @@ void get_command()
 			{
 				SERIAL_PROTOCOLLNPGM(MSG_FILE_PRINTED);
 				SERIAL_ECHO_START;
-				SERIAL_ECHOLN(EchoTimeSpan (JobTime()));
+				SERIAL_ECHOLN(EchoTimeSpan (job.JobTime()));
 				card.printingHasFinished();
 				/* JobDone(); */
 				card.checkautostart(true);
@@ -685,7 +659,7 @@ XYZ_CONSTS_FROM_CONFIG(signed char, home_dir,  HOME_DIR);
 //-------------------------------------------------------------------------------------------------------------------
 static void axis_is_at_home(int axis)
 {
-	current_position[axis] = base_home_pos(axis) + add_homeing[axis];
+	current_head_position[axis] = base_home_pos(axis) + add_homeing[axis];
 	min_pos[axis] =          base_min_pos(axis) + add_homeing[axis];
 	max_pos[axis] =          base_max_pos(axis) + add_homeing[axis];
 }
@@ -701,15 +675,15 @@ static void homeaxis(int axis)
 		axis==Z_AXIS ? HOMEAXIS_DO(Z) :
 		0)
 	{
-		current_position[axis] = 0;
-		plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
+		current_head_position[axis] = 0;
+		plan_set_position(current_head_position[X_AXIS], current_head_position[Y_AXIS], current_head_position[Z_AXIS], current_head_position[E_AXIS]);
 		destination[axis] = 1.5 * max_length(axis) * home_dir(axis);
 		feedrate = homing_feedrate[axis];
 		plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], feedrate/60, active_extruder);
 		st_synchronize();
 
-		current_position[axis] = 0;
-		plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
+		current_head_position[axis] = 0;
+		plan_set_position(current_head_position[X_AXIS], current_head_position[Y_AXIS], current_head_position[Z_AXIS], current_head_position[E_AXIS]);
 		destination[axis] = -home_retract_mm(axis) * home_dir(axis);
 		plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], feedrate/60, active_extruder);
 		st_synchronize();
@@ -720,7 +694,7 @@ static void homeaxis(int axis)
 		st_synchronize();
 
 		axis_is_at_home(axis);
-		destination[axis] = current_position[axis];
+		destination[axis] = current_head_position[axis];
 		feedrate = 0.0;
 		endstops_hit_on_purpose();
 	}
@@ -745,10 +719,10 @@ void process_commands()
 		{
 		case 0: // G0 -> G1
 		case 1: // G1
-			SERIAL_ECHO_START;
-			SERIAL_ECHOLN("G0/G1");
+// 			SERIAL_ECHO_START;
+// 			SERIAL_ECHOLN("G0/G1");
 
-			if(Stopped == false)
+			if(!Stopped)
 			{
 				get_coordinates(); // For X Y Z E F
 				prepare_move();
@@ -757,14 +731,14 @@ void process_commands()
 			}
 			else
 			{
-				LCD_MESSAGEPGM("PRINT FAIL, STOPPED.");
+				LCD_MESSAGEPGM(MSG_STOPPED);
 			}
 			break;
 			//break;
 		case 2: // G2  - CW ARC
-			SERIAL_ECHO_START;
-			SERIAL_ECHOLN("G2");
-			if(Stopped == false)
+// 			SERIAL_ECHO_START;
+// 			SERIAL_ECHOLN("G2");
+ 			if(!Stopped)
 			{
 				get_arc_coordinates();
 				prepare_arc_move(true);
@@ -772,14 +746,14 @@ void process_commands()
 			}
 			else
 			{
-				LCD_MESSAGEPGM("PRINT FAIL, STOPPED.");
+				LCD_MESSAGEPGM(MSG_STOPPED);
 			}
 
 			break;
 		case 3: // G3  - CCW ARC
-			SERIAL_ECHO_START;
-			SERIAL_ECHOLN("C3");
-			if(Stopped == false)
+// 			SERIAL_ECHO_START;
+// 			SERIAL_ECHOLN("C3");
+			if(!Stopped)
 			{
 				get_arc_coordinates();
 				prepare_arc_move(false);
@@ -787,7 +761,7 @@ void process_commands()
 			}
 			else
 			{
-				LCD_MESSAGE("PRINT FAIL, STOPPED.");
+				LCD_MESSAGE(MSG_STOPPED);
 			}
 
 			break;
@@ -812,11 +786,11 @@ void process_commands()
 			state = RETRACT;
 			if(!retracted)
 			{
-				destination[X_AXIS]=current_position[X_AXIS];
-				destination[Y_AXIS]=current_position[Y_AXIS];
-				destination[Z_AXIS]=current_position[Z_AXIS];
-				current_position[Z_AXIS]+=-retract_zlift;
-				destination[E_AXIS]=current_position[E_AXIS]-retract_length;
+				destination[X_AXIS]=current_head_position[X_AXIS];
+				destination[Y_AXIS]=current_head_position[Y_AXIS];
+				destination[Z_AXIS]=current_head_position[Z_AXIS];
+				current_head_position[Z_AXIS]+=-retract_zlift;
+				destination[E_AXIS]=current_head_position[E_AXIS]-retract_length;
 				feedrate=retract_feedrate;
 				retracted=true;
 				prepare_move();
@@ -827,12 +801,12 @@ void process_commands()
 			state = EXTRUDE;
 			if(!retracted)
 			{
-				destination[X_AXIS]=current_position[X_AXIS];
-				destination[Y_AXIS]=current_position[Y_AXIS];
-				destination[Z_AXIS]=current_position[Z_AXIS];
+				destination[X_AXIS]=current_head_position[X_AXIS];
+				destination[Y_AXIS]=current_head_position[Y_AXIS];
+				destination[Z_AXIS]=current_head_position[Z_AXIS];
 
-				current_position[Z_AXIS]+=retract_zlift;
-				current_position[E_AXIS]+=-retract_recover_length;
+				current_head_position[Z_AXIS]+=retract_zlift;
+				current_head_position[E_AXIS]+=-retract_recover_length;
 				feedrate=retract_recover_feedrate;
 				retracted=false;
 				prepare_move();
@@ -849,7 +823,7 @@ void process_commands()
 			enable_endstops(true);
 			for(int8_t i=0; i < NUM_AXIS; i++)
 			{
-				destination[i] = current_position[i];
+				destination[i] = current_head_position[i];
 			}
 			feedrate = 0.0;
 			home_all_axis = !((code_seen(axis_codes[0])) || (code_seen(axis_codes[1])) || (code_seen(axis_codes[2])));
@@ -864,10 +838,10 @@ void process_commands()
 #ifdef QUICK_HOME
 			if((home_all_axis)||( code_seen(axis_codes[X_AXIS]) && code_seen(axis_codes[Y_AXIS])) )  //first diagonal move
 			{
-				current_position[X_AXIS] = 0;
-				current_position[Y_AXIS] = 0;
+				current_head_position[X_AXIS] = 0;
+				current_head_position[Y_AXIS] = 0;
 
-				plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
+				plan_set_position(current_head_position[X_AXIS], current_head_position[Y_AXIS], current_head_position[Z_AXIS], current_head_position[E_AXIS]);
 				destination[X_AXIS] = 1.5 * X_MAX_LENGTH * X_HOME_DIR;
 				destination[Y_AXIS] = 1.5 * Y_MAX_LENGTH * Y_HOME_DIR;
 				feedrate = homing_feedrate[X_AXIS];
@@ -878,9 +852,9 @@ void process_commands()
 
 				axis_is_at_home(X_AXIS);
 				axis_is_at_home(Y_AXIS);
-				plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
-				destination[X_AXIS] = current_position[X_AXIS];
-				destination[Y_AXIS] = current_position[Y_AXIS];
+				plan_set_position(current_head_position[X_AXIS], current_head_position[Y_AXIS], current_head_position[Z_AXIS], current_head_position[E_AXIS]);
+				destination[X_AXIS] = current_head_position[X_AXIS];
+				destination[Y_AXIS] = current_head_position[Y_AXIS];
 				plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], feedrate/60, active_extruder);
 				feedrate = 0.0;
 				st_synchronize();
@@ -909,7 +883,7 @@ void process_commands()
 			{
 				if(code_value_long() != 0)
 				{
-					current_position[X_AXIS]=code_value()+add_homeing[0];
+					current_head_position[X_AXIS]=code_value()+add_homeing[0];
 				}
 			}
 
@@ -917,7 +891,7 @@ void process_commands()
 			{
 				if(code_value_long() != 0)
 				{
-					current_position[Y_AXIS]=code_value()+add_homeing[1];
+					current_head_position[Y_AXIS]=code_value()+add_homeing[1];
 				}
 			}
 
@@ -925,10 +899,10 @@ void process_commands()
 			{
 				if(code_value_long() != 0)
 				{
-					current_position[Z_AXIS]=code_value()+add_homeing[2];
+					current_head_position[Z_AXIS]=code_value()+add_homeing[2];
 				}
 			}
-			plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
+			plan_set_position(current_head_position[X_AXIS], current_head_position[Y_AXIS], current_head_position[Z_AXIS], current_head_position[E_AXIS]);
 
 #ifdef ENDSTOPS_ONLY_FOR_HOMING
 			enable_endstops(false);
@@ -954,13 +928,13 @@ void process_commands()
 				{
 					if(i == E_AXIS)
 					{
-						current_position[i] = code_value();
-						plan_set_e_position(current_position[E_AXIS]);
+						current_head_position[i] = code_value();
+						plan_set_e_position(current_head_position[E_AXIS]);
 					}
 					else
 					{
-						current_position[i] = code_value()+add_homeing[i];
-						plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
+						current_head_position[i] = code_value()+add_homeing[i];
+						plan_set_position(current_head_position[X_AXIS], current_head_position[Y_AXIS], current_head_position[Z_AXIS], current_head_position[E_AXIS]);
 					}
 				}
 			}
@@ -1042,8 +1016,8 @@ void process_commands()
 			break;
 		case 24: //M24 - Start SD print
 			state = PRINTING;
-			controller = SDCARD;
-			JobStart();
+			state.SetController ( SDCARD);
+			job.Start();
 			card.startFileprint();
 			break;
 		case 25: //M25 - Pause SD print
@@ -1062,7 +1036,8 @@ void process_commands()
 			break;
 		case 28: //M28 - Start SD write
 			state = SAVING;
-			JobStart();
+			job.Start();
+		
 			starpos = (strchr(strchr_pointer + 4,'*'));
 			if(starpos != NULL)
 			{
@@ -1098,7 +1073,7 @@ void process_commands()
 		case 31: //M31 take time since the start of the SD print or an M109 command
 			{
 				SERIAL_ECHO_START;
-				SERIAL_ECHOLN(EchoTimeSpan (JobTime()));
+				SERIAL_ECHOLN(EchoTimeSpan (job.JobTime()));
 
 				autotempShutdown();  // why are we doing this?  Do we really want to do anything because we queried the time since printing started?
 			}
@@ -1173,15 +1148,14 @@ void process_commands()
 			break;
 		case 109:
 			{
-				//					echo = true;
+				job.Start();				//					echo = true;
 				state = HEATING;
 				// M109 - Wait for extruder heater to reach target.
 				if(setTargetedHotend(109))
 				{
 					break;
 				}
-				stoptime = starttime=millis() / 1000;
-				LCD_MESSAGEPGM(MSG_HEATING);
+
 
 #ifdef AUTOTEMP
 				autotemp_enabled=false;
@@ -1240,6 +1214,7 @@ void process_commands()
 						codenum = millis();
 					}
 					manage_other_tasks();
+					LCD_MESSAGEPGMPRI(MSG_HEATING,DEFAULT_MESSAGE_PRIORITY/2);
 #ifdef TEMP_RESIDENCY_TIME
 					/* start/restart the TEMP_RESIDENCY_TIME timer whenever we reach target temp for the first time
 					or when current temp falls outside the hysteresis after target temp was reached */
@@ -1251,8 +1226,8 @@ void process_commands()
 					}
 #endif //TEMP_RESIDENCY_TIME
 				}
-				LCD_MESSAGEPGM(MSG_HEATING_COMPLETE);
-				JobStart();
+				LCD_MESSAGEPGMPRI(MSG_HEATING_COMPLETE, DEFAULT_MESSAGE_PRIORITY+1);
+				job.Start();
 				SERIAL_ECHO_START;
 				SERIAL_ECHOLNPGM("Heating done, let's go! ");
 				previous_millis_cmd = millis();
@@ -1260,8 +1235,8 @@ void process_commands()
 			break;
 		case 190: // M190 - Wait for bed heater to reach target.
 #if TEMP_BED_PIN > -1
-			starttime=stoptime=millis() / 1000;
-			LCD_MESSAGEPGM(MSG_BED_HEATING);
+			job.Start();
+			
 			state = HEATING;
 			progress_string[2] = String ("   BED   ") ;
 
@@ -1280,6 +1255,7 @@ void process_commands()
 					SERIAL_PROTOCOL_F(degBed(),1);
 					SERIAL_PROTOCOLLN("");
 					codenum =now;
+					LCD_MESSAGEPGMPRI(MSG_BED_HEATING,DEFAULT_MESSAGE_PRIORITY/2);
 				}
 				manage_other_tasks();
 			}
@@ -1313,6 +1289,7 @@ void process_commands()
 
 		case 81: // M81 - ATX Power Off
 			state = SLEEPING;
+			LCD_MESSAGEPGMPRI("POWER OFF",USER_MESSAGE_PRIORITY);
 #if defined SUICIDE_PIN && SUICIDE_PIN > -1
 			st_synchronize();
 			suicide();
@@ -1330,7 +1307,7 @@ void process_commands()
 			break;
 		case 18: //compatibility
 		case 84: // M84
-			if (isActiveState()) state = SLEEPING;
+			if (!state.isActiveState()) state = SLEEPING; else job.Stop();
 			if(code_seen('S'))
 			{
 				stepper_inactive_time = code_value() * 1000;
@@ -1349,19 +1326,22 @@ void process_commands()
 				}
 				else
 				{
+					String message = "Steppers ";
 					st_synchronize();
-					if(code_seen('X')) disable_x();
-					if(code_seen('Y')) disable_y();
-					if(code_seen('Z')) disable_z();
+					if(code_seen('X')) { disable_x(); message+="X";};
+					if(code_seen('Y')) { disable_y(); message+="Y";};
+					if(code_seen('Z')) { disable_z(); message+="Z";};
 #if ((E0_ENABLE_PIN != X_ENABLE_PIN) && (E1_ENABLE_PIN != Y_ENABLE_PIN)) // Only enable on boards that have seperate ENABLE_PINS
 					if(code_seen('E'))
 					{
 						disable_e0();
 						disable_e1();
 						disable_e2();
+						message+="E";
 					}
 #endif
-					LCD_MESSAGEPGM(MSG_PART_RELEASE);
+					message += " released";
+					LCD_MESSAGE(message);
 				}
 			}
 			break;
@@ -1394,24 +1374,24 @@ void process_commands()
 			break;
 		case 115: // M115 Report firmware string
 			SerialprintPGM(MSG_M115_REPORT);
-			controller = SERIAL_HOST;
+			state.SetController (SERIAL_HOST);
 			EEPROM_printHistory();
-			LCD_MESSAGEPGM("host connected");
+			LCD_MESSAGEPGM("USB host connected");
 			if (state==WELCOME) state = IDLE;
 			break;
 		case 117: // M117 display message
 		case 70:  // M70 display message (replicator)
-			LCD_MESSAGE(cmdbuffer[bufindr]+5);
+			LCD_MESSAGEPRI(cmdbuffer[bufindr]+5, USER_MESSAGE_PRIORITY);
 			break;
 		case 114: // M114  report current position
 			SERIAL_PROTOCOLPGM("X:");
-			SERIAL_PROTOCOL(current_position[X_AXIS]);
+			SERIAL_PROTOCOL(current_head_position[X_AXIS]);
 			SERIAL_PROTOCOLPGM("Y:");
-			SERIAL_PROTOCOL(current_position[Y_AXIS]);
+			SERIAL_PROTOCOL(current_head_position[Y_AXIS]);
 			SERIAL_PROTOCOLPGM("Z:");
-			SERIAL_PROTOCOL(current_position[Z_AXIS]);
+			SERIAL_PROTOCOL(current_head_position[Z_AXIS]);
 			SERIAL_PROTOCOLPGM("E:");
-			SERIAL_PROTOCOL(current_position[E_AXIS]);
+			SERIAL_PROTOCOL(current_head_position[E_AXIS]);
 
 			SERIAL_PROTOCOLPGM(MSG_COUNT_X);
 			SERIAL_PROTOCOL(float(st_get_position(X_AXIS))/axis_steps_per_unit[X_AXIS]);
@@ -1562,6 +1542,8 @@ void process_commands()
 				if(code_seen('S'))
 				{
 					feedmultiply = code_value() ;
+					if(feedmultiply<10) feedmultiply=10;
+					if(feedmultiply>250) feedmultiply=250;
 					feedmultiplychanged=true;
 				}
 			}
@@ -1571,6 +1553,8 @@ void process_commands()
 				if(code_seen('S'))
 				{
 					extrudemultiply = code_value() ;
+					if(extrudemultiply<10)	extrudemultiply=10;
+					if(extrudemultiply>250)	extrudemultiply=250;
 				}
 			}
 			break;
@@ -1659,6 +1643,7 @@ void process_commands()
 					temp=70;
 				if (code_seen('S')) temp=code_value();
 				if (code_seen('C')) c=code_value();
+				LCD_MESSAGE_CLEAR;
 				LCD_MESSAGEPGM("TUNING PID");
 				PID_autotune(temp, e, c);
 				LCD_MESSAGEPGM("PID TUNE DONE");
@@ -1707,32 +1692,43 @@ void process_commands()
 			}
 			break;
 		case 999: // Restart after being stopped
-			Stopped = false;
+			state= IDLE;
 			gcode_LastN = Stopped_gcode_LastN;
+			job.Stop();
+			LCD_MESSAGE_CLEAR;
 			FlushSerialRequestResend();
 			break;
 
 			// extensions start here:
 		case 300:	// beep the beeper for a beep
-			beep();	// todo: add parameters for control over freq and dur
+			beep();	// todo: add parameters for control over freq and dur?
 			break;
 
 		case 420: 	// set RGB "mood light"
 			{
+				if (code_seen('P'))
+				{
+#ifdef BLINK_M
+					BlinkM_playScript(BLINK_M_ADDR,code_value(),0,0);
+#endif
+					break;
+				}
 				int r,g,b=0;
 				if (code_seen('R')) r=code_value();
 				if (code_seen('E')) g=code_value();
 				// yes, this is an E, not a G
 				if (code_seen('B')) b=code_value();
-				setLEDColor(r,g,b);
+				SetLEDColor(r,g,b);
 			}
 			break;
 		case 73:	// set progress
-			if (code_seen ('P'))
-			{
-				percent = code_value();
-				we_have_gcode_progress = true;
-			}
+			if (code_seen ('P'))		// ack, this comes in as an int...oh well....
+				{
+					float p = code_value();
+					if (p==0.0) job.Start(true);		// setting percent done to 0 will also reset the job start point
+					else job.SetPercent(p);
+
+				}
 			break;
 
 		case 72: // play song
@@ -1799,25 +1795,25 @@ void get_coordinates()
 	{
 		if(code_seen(axis_codes[i]))
 		{
-			destination[i] = (float)code_value() + (axis_relative_modes[i] || relative_mode)*current_position[i];
+			destination[i] = (float)code_value() + (axis_relative_modes[i] || relative_mode)*current_head_position[i];
 			seen[i]=true;
 		}
-		else destination[i] = current_position[i]; //Are these else lines really needed?
+		else destination[i] = current_head_position[i]; //Are these else lines really needed?
 	}
 
 	// does this move have an extract?
 	if (state != SAVING)
 	{
-		if (seen[3])
+		if (seen[E_AXIS])
 		{
 			if (!seen[0] && !seen[1] && !seen[2])
 			{
-				if (destination[3] > current_position[3] )
+				if (destination[E_AXIS] > current_head_position[E_AXIS] )
 					state = EXTRUDE;
 				else
 					state = RETRACT;
-				progress_string[1] = (ftostr32a(destination[3] - current_position[3]));
-				progress_string[1] += "mm";
+// 				progress_string[1] = (ftostr32a(destination[E_AXIS] - current_head_position[E_AXIS]));
+// 				progress_string[1] += "mm";
 			}
 			else
 				state = PRINTING;
@@ -1834,7 +1830,7 @@ void get_coordinates()
 	if(autoretract_enabled)
 		if( !(seen[X_AXIS] || seen[Y_AXIS] || seen[Z_AXIS]) && seen[E_AXIS])
 		{
-			float echange=destination[E_AXIS]-current_position[E_AXIS];
+			float echange=destination[E_AXIS]-current_head_position[E_AXIS];
 			if(echange<-MIN_RETRACT) //retract
 			{
 				if(!retracted)
@@ -1843,7 +1839,7 @@ void get_coordinates()
 					//if slicer retracted by echange=-1mm and you want to retract 3mm, corrrectede=-2mm additionally
 					float correctede=-echange-retract_length;
 					//to generate the additional steps, not the destination is changed, but inversely the current position
-					current_position[E_AXIS]+=-correctede;
+					current_head_position[E_AXIS]+=-correctede;
 					feedrate=retract_feedrate;
 					retracted=true;
 				}
@@ -1855,7 +1851,7 @@ void get_coordinates()
 					//current_position[Z_AXIS]+=-retract_zlift;
 					//if slicer retracted_recovered by echange=+1mm and you want to retract_recover 3mm, corrrectede=2mm additionally
 					float correctede=-echange+1*retract_length+retract_recover_length; //total unretract=retract_length+retract_recover_length[surplus]
-					current_position[E_AXIS]+=correctede; //to generate the additional steps, not the destination is changed, but inversely the current position
+					current_head_position[E_AXIS]+=correctede; //to generate the additional steps, not the destination is changed, but inversely the current position
 					feedrate=retract_recover_feedrate;
 					retracted=false;
 				}
@@ -1919,7 +1915,7 @@ void prepare_move()
 
 	previous_millis_cmd = millis();
 	// Do not use feedmultiply for E or Z only moves
-	if( (current_position[X_AXIS] == destination [X_AXIS]) && (current_position[Y_AXIS] == destination [Y_AXIS]))
+	if( (current_head_position[X_AXIS] == destination [X_AXIS]) && (current_head_position[Y_AXIS] == destination [Y_AXIS]))
 	{
 		plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], feedrate/60, active_extruder);
 	}
@@ -1929,13 +1925,13 @@ void prepare_move()
 	}
 
 	// record the net movement of the filaments
-	total_filament +=  destination[E_AXIS]-current_position[E_AXIS] ;
+	total_filament +=  destination[E_AXIS]-current_head_position[E_AXIS] ;
 
 	for(int8_t i=0; i < NUM_AXIS; i++)
 	{
 		// record all motion, forward or backwards, into the total movement
-		total_distance[i] += fabs (current_position[i] -  destination[i]);
-		current_position[i] = destination[i];
+		total_distance[i] += fabs (current_head_position[i] -  destination[i]);
+		current_head_position[i] = destination[i];
 	}
 }
 
@@ -1945,14 +1941,14 @@ void prepare_arc_move(char isclockwise)
 	float r = hypot(offset[X_AXIS], offset[Y_AXIS]); // Compute arc radius for mc_arc
 
 	// Trace the arc
-	mc_arc(current_position, destination, offset, X_AXIS, Y_AXIS, Z_AXIS, feedrate*feedmultiply/60/100.0, r, isclockwise, active_extruder);
+	mc_arc(current_head_position, destination, offset, X_AXIS, Y_AXIS, Z_AXIS, feedrate*feedmultiply/60/100.0, r, isclockwise, active_extruder);
 
 	// As far as the parser is concerned, the position is now == target. In reality the
 	// motion control system might still be processing the action and the real tool position
 	// in any intermediate location.
 	for(int8_t i=0; i < NUM_AXIS; i++)
 	{
-		current_position[i] = destination[i];
+		current_head_position[i] = destination[i];
 	}
 	previous_millis_cmd = millis();
 }
@@ -2030,12 +2026,12 @@ void manage_inactivity()
 		{
 			bool oldstatus=READ(E0_ENABLE_PIN);
 			enable_e0();
-			float oldepos=current_position[E_AXIS];
+			float oldepos=current_head_position[E_AXIS];
 			float oldedes=destination[E_AXIS];
-			plan_buffer_line(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS],
-				current_position[E_AXIS]+EXTRUDER_RUNOUT_EXTRUDE*EXTRUDER_RUNOUT_ESTEPS/axis_steps_per_unit[E_AXIS],
+			plan_buffer_line(current_head_position[X_AXIS], current_head_position[Y_AXIS], current_head_position[Z_AXIS],
+				current_head_position[E_AXIS]+EXTRUDER_RUNOUT_EXTRUDE*EXTRUDER_RUNOUT_ESTEPS/axis_steps_per_unit[E_AXIS],
 				EXTRUDER_RUNOUT_SPEED/60.*EXTRUDER_RUNOUT_ESTEPS/axis_steps_per_unit[E_AXIS], active_extruder);
-			current_position[E_AXIS]=oldepos;
+			current_head_position[E_AXIS]=oldepos;
 			destination[E_AXIS]=oldedes;
 			plan_set_e_position(oldepos);
 			previous_millis_cmd=millis();
@@ -2049,25 +2045,19 @@ void manage_inactivity()
 //-------------------------------------------------------------------------------------------------------------------
 void kill(int fatal)
 {
+//	if (state.isActiveState ()) job.Stop();
 	SERIAL_ERROR_START;
 	if (fatal)
-	{
-		SERIAL_ERRORLNPGM("Printer halted. kill() called !!");
-		//	LCD_MESSAGEPGM("KILLED. ");
-		setLEDColor(ERROR_COLOR);
-		state = ERROR;
-	}
+		{
+			state = ERROR;
+		//	Error(MSG_ERR_KILLED);
+
+		}
 	else
-	{
-		SERIAL_ERRORLNPGM("Printer idle, going to sleep");
-		LCD_MESSAGEPGM("...sleeping... ");
-		setLEDColor(SLEEP_COLOR);
 		state = SLEEPING;
-	}
 	disable_heater();
 	DisableAllSteppers();
 	cli(); // Stop interrupts
-	if (isActiveState ())  stoptime=millis()/1000;
 	if(PS_ON_PIN > -1) pinMode(PS_ON_PIN,INPUT);
 	suicide();
 #if !defined(__AVR_AT90USB1286__) && !defined(__AVR_AT90USB1287__) // this will kill the usb serial so the messages aren't seen
@@ -2079,17 +2069,12 @@ void kill(int fatal)
 void Stop()
 {
 	disable_heater();
-	if(Stopped == false)
+	if(!Stopped)
 	{
-		Stopped = true;
 		Stopped_gcode_LastN = gcode_LastN; // Save last g_code for restart
-		SERIAL_ERROR_START;
-		SERIAL_ERRORLNPGM(MSG_ERR_STOPPED);
-		LCD_MESSAGEPGM(MSG_STOPPED);
-		setLEDColor(STOP_COLOR);
-		stoptime=millis()/1000;
+		state = ERROR;
+		Error(MSG_ERR_STOPPED);
 	}
-	state = IDLE;
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -2097,237 +2082,6 @@ bool IsStopped()
 {
 	return Stopped;
 };
-
-//return for string conversion routines
-static char conv[8];
-
-//**********************************************************************************************************
-//  convert float to string with 123 format
-char *ftostr3(const float &x)
-{
-	return ftostr (x,3,0,false);
-	/*
-	//sprintf(conv,"%5.1f",x);
-	int xx=x;
-	conv[0]=(xx/100)%10+'0';
-	conv[1]=(xx/10)%10+'0';
-	conv[2]=(xx)%10+'0';
-	conv[3]=0;
-	return conv;*/
-}
-
-char *itostr2(const uint8_t &x)
-{
-	//sprintf(conv,"%5.1f",x);
-	int xx=x;
-	conv[0]=(xx/10)%10+'0';
-	conv[1]=(xx)%10+'0';
-	conv[2]=0;
-	return conv;
-}
-
-char *ftostr(float x,int pre,int post, bool sign)
-{
-	static int powers[7]={
-		1,
-		10,
-		100,
-		1000,
-		10000,
-		100000,
-		1000000
-	};
-	int xx=x*powers[post];
-	int pos =0 ;
-	if (sign)
-	{
-		conv[pos++]=(xx>=0)?'+':'-';
-		xx=abs(xx);
-	}
-	for (;pre >0;pre--)
-		conv[pos++]=(xx / powers[pre+post-1]) % 10+'0';
-	if (post>0)
-	{
-		conv[pos++]='.';
-		for (;post >0;post--)
-			conv[pos++]=(xx / powers[pre+post-1]) % 10+'0';
-	}
-	conv[pos++]=0;
-	return conv;
-}
-
-//  convert float to string with +123.4 format
-char *ftostr31(const float &x)
-{
-	return ftostr (x, 3,1,true);
-
-	/*
-	int xx=x*10;
-	conv[0]=(xx>=0)?'+':'-';
-	xx=abs(xx);
-	conv[1]=(xx/1000)%10+'0';
-	conv[2]=(xx/100)%10+'0';
-	conv[3]=(xx/10)%10+'0';
-	conv[4]='.';
-	conv[5]=(xx)%10+'0';
-	conv[6]=0;
-	return conv;*/
-}
-
-// no sign 12.345
-char *ftostr23a(const float &x)
-{
-	return ftostr (x, 2,3,false);
-	/*
-
-	int xx=x*1000;
-	//	xx=abs(xx);
-	conv[0]=(xx/10000)%10+'0';
-	conv[1]=(xx/1000)%10+'0';
-	conv[2]='.';
-	conv[3]=(xx/100)%10+'0';
-	conv[4]=(xx/10)%10+'0';
-	conv[5]=(xx)%10+'0';
-	conv[6]=0;
-	return conv;*/
-}
-
-// no sign 123.45
-char *ftostr32a(const float &x)
-{
-	return ftostr (x, 3,2,false);
-	/*
-	int xx=x*100;
-	//	xx=abs(xx);
-	conv[0]=(xx/10000)%10+'0';
-	conv[1]=(xx/1000)%10+'0';
-	conv[2]=(xx/100)%10+'0';
-	conv[3]='.';
-	conv[4]=(xx/10)%10+'0';
-	conv[5]=(xx)%10+'0';
-	conv[6]=0;
-	return conv;*/
-}
-
-char *ftostr32(const float &x)
-{
-	return ftostr (x, 3,2,true);
-	/*
-
-	long xx=x*100;
-	conv[0]=(xx>=0)?'+':'-';
-	xx=abs(xx);
-	conv[1]=(xx/100)%10+'0';
-	conv[2]='.';
-	conv[3]=(xx/10)%10+'0';
-	conv[4]=(xx)%10+'0';
-	conv[5]=0;
-	return conv;*/
-}
-
-char *itostr31(const int &xx)
-{
-	conv[0]=(xx>=0)?'+':'-';
-	conv[1]=(xx/1000)%10+'0';
-	conv[2]=(xx/100)%10+'0';
-	conv[3]=(xx/10)%10+'0';
-	conv[4]='.';
-	conv[5]=(xx)%10+'0';
-	conv[6]=0;
-	return conv;
-}
-
-char *itostr3(const int &xx)
-{
-	conv[0]=(xx/100)%10+'0';
-	conv[1]=(xx/10)%10+'0';
-	conv[2]=(xx)%10+'0';
-	conv[3]=0;
-	return conv;
-}
-
-char *itostr4(const int &xx)
-{
-	conv[0]=(xx/1000)%10+'0';
-	conv[1]=(xx/100)%10+'0';
-	conv[2]=(xx/10)%10+'0';
-	conv[3]=(xx)%10+'0';
-	conv[4]=0;
-	return conv;
-}
-
-//  convert float to string with +1234.5 format
-char *ftostr51(const float &x)
-{
-	return ftostr (x, 5,1,true);
-	/*
-
-	long xx=x*10;
-	conv[0]=(xx>=0)?'+':'-';
-	xx=abs(xx);
-	conv[1]=(xx/10000)%10+'0';
-	conv[2]=(xx/1000)%10+'0';
-	conv[3]=(xx/100)%10+'0';
-	conv[4]=(xx/10)%10+'0';
-	conv[5]='.';
-	conv[6]=(xx)%10+'0';
-	conv[7]=0;
-	return conv;*/
-}
-
-//  convert float to string with +123.45 format
-char *ftostr52(const float &x)
-{
-	return ftostr (x, 5,2,true);
-
-	long xx=x*100;
-	conv[0]=(xx>=0)?'+':'-';
-	xx=abs(xx);
-	conv[1]=(xx/10000)%10+'0';
-	conv[2]=(xx/1000)%10+'0';
-	conv[3]=(xx/100)%10+'0';
-	conv[4]='.';
-	conv[5]=(xx/10)%10+'0';
-	conv[6]=(xx)%10+'0';
-	conv[7]=0;
-	return conv;
-}
-
-//  convert float to string with 12345.6 format
-char *ftostr52a(const float &x)
-{
-	return ftostr (x, 5,2,false);
-
-	long xx=x*100;
-	//	xx=abs(xx);
-	conv[0]=(xx/100000)%10+'0';
-	conv[1]=(xx/10000)%10+'0';
-	conv[2]=(xx/1000)%10+'0';
-	conv[3]=(xx/100)%10+'0';
-	conv[4]='.';
-	conv[5]=(xx/10)%10+'0';
-	conv[6]=(xx)%10+'0';
-	conv[7]=0;
-	return conv;
-}
-
-//  convert float to string with 12345.6 format
-char *ftostr61(const float &x)
-{
-	return ftostr (x, 6,1,false);
-
-	long xx=x*10;
-	//	xx=abs(xx);
-	conv[0]=(xx/100000)%10+'0';
-	conv[1]=(xx/10000)%10+'0';
-	conv[2]=(xx/1000)%10+'0';
-	conv[3]=(xx/100)%10+'0';
-	conv[4]=(xx/10)%10+'0';
-	conv[5]='.';
-	conv[6]=(xx)%10+'0';
-	conv[7]=0;
-	return conv;
-}
 
 #ifdef FAST_PWM_FAN
 void setPwmFrequency(uint8_t pin, int val)
@@ -2410,13 +2164,13 @@ bool setTargetedHotend(int code)
 			switch(code)
 			{
 			case 104:
-				SERIAL_ECHO(MSG_M104_INVALID_EXTRUDER);
+				Error(MSG_M104_INVALID_EXTRUDER);
 				break;
 			case 105:
-				SERIAL_ECHO(MSG_M105_INVALID_EXTRUDER);
+				Error(MSG_M105_INVALID_EXTRUDER);
 				break;
 			case 109:
-				SERIAL_ECHO(MSG_M109_INVALID_EXTRUDER);
+				Error(MSG_M109_INVALID_EXTRUDER);
 				break;
 			}
 			SERIAL_ECHOLN(tmp_extruder);
@@ -2427,324 +2181,14 @@ bool setTargetedHotend(int code)
 }
 
 //-------------------------------------------------------------------------------------------------------------------
-char* EchoTimeSpan (long t, bool shortform)
-{
-	static char timespan_buffer[26];
-	int sec,min,hr;
-	hr = t/3600;
-	t-=hr*3600;
-	//if (hr>99) hr=99;
-	min=t/60;
-	t-=min*60;
-	min%=60;
-
-	sec=t%60;
-	if (hr <= 99)
-	{
-		if (shortform)
-			sprintf(timespan_buffer,"%02d:%02d:%02d",(hr),(min),(sec));
-		else
-			sprintf(timespan_buffer,"%i hrs, %i min, %i sec",hr,min,sec);
-	}
-	else
-	{
-		int days =hr / 24;
-		hr -= days * (24);
-		if (shortform)
-			sprintf(timespan_buffer,"%s days",ftostr51((float) t / (3600*24.0)));
-		else
-			sprintf(timespan_buffer,"%i days %i hrs, %i min, %i sec",days, hr,min,sec);
-	}
-
-	return timespan_buffer;
-};
-
-//-------------------------------------------------------------------------------------------------------------------
-void JobDone()
-{
-	state = DONE;
-	percent = 100;
-	stoptime=millis()/1000;
-	progress_string[0] = EchoTimeSpan (JobTime(),1);
-	progress_string[1] = "         ";//String ("Z:") + String(ftostr31(current_position[Z_AXIS]));
-
-	progress_string[2] = ftostr32a ((total_filament - job_start_filament)/1000) + String("m");
-
-	LCD_STATUS;
-	SERIAL_ECHO_START
-		SERIAL_PROTOCOLPGM("// DONE!  PRINT TIME WAS : " );
-	SERIAL_PROTOCOLLN(progress_string[0]);
-	SERIAL_PROTOCOLPGM("//Filament used: ");
-	SERIAL_PROTOCOLLN(progress_string[2]);
-
-	progress_string[2] = String ("F:") +progress_string[2];
-
-	// play a happy tune on the beeper!
-}
-
-unsigned long last_time_estimate=1;
-//-------------------------------------------------------------------------------------------------------------------
-unsigned long CalculateRemainingTime (float percent_complete,unsigned long elapsed_time)
-{
-	if (percent_complete<0.1) return elapsed_time;
-	static float last_percent = -1;
-	if (last_percent == percent_complete ) return last_time_estimate;
-	last_percent= percent_complete;
-
-	unsigned long total_time = elapsed_time / ( percent_complete / 100.0);
-	last_time_estimate = total_time - elapsed_time;
-	return last_time_estimate;
-}
-
-
-
-
-//-------------------------------------------------------------------------------------------------------------------
-// uses I2C RGB LED since we have only one PWM pin available
-// like the BlinkM
-void setLEDColor (int r, int g, int b)
-{
-
-#ifdef BLINK_M
-
-const byte sclPin = 7;  // digital pin 7 wired to 'c' on BlinkM
-const byte sdaPin = 6;  // digital pin 6 wired to 'd' on BlinkM
-const byte pwrPin = 5;  // digital pin 5 wired to '+' on BlinkM
-const byte gndPin = 4;  // digital pin 4 wired to '-' on BlinkM
-	BlinkM_stopScript(BLINK_M_ADDR);
-		
-	BlinkM_fadeToRGB(BLINK_M_ADDR,r,g,b);
-#endif
-/*
-	SERIAL_ECHO_START;
-	SERIAL_ECHO(" R=");
-	SERIAL_ECHO (r);
-	SERIAL_ECHO ("  G=");
-	SERIAL_ECHO(g);
-	SERIAL_ECHO(" B=");
-	SERIAL_ECHOLN(b);
-*/
-}
-
-STATES state = WELCOME;
-CONTROLLER controller  = PANEL;
-unsigned long time_of_last_command=-1;
-
-//-------------------------------------------------------------------------------------------------------------------
-void UpdateProgressAndState ()
-{
-	if (time_of_last_command<0) controller = PANEL;
-	if (card.saving) controller = SERIAL_HOST;
-	if (card.sdprinting) controller = SDCARD;
-	int time_since_command = (now - time_of_last_command )/1000;
-	if (time_since_command > 10)
-	{
-		controller = PANEL;
-	}
-	int last_phase = -1;
-
-	switch (state)
-	{
-	case SLEEPING:
-	case IDLE :
-		progress_string[2] = EchoTimeSpan((now - time_of_last_command)/1000,true);
-		progress_string[1] = "Last Cmd";
-		progress_string[0] = "          ";
-		break;
-	case WELCOME:
-		{
-#ifdef SAVE_DEVICE_METRICS
-			progress_string[1]=String(" LIFETIME");
-#else
-			progress_string[1]=String(" SESSION ");
-#endif
-			switch ((now/3000) % 10)
-			{
-			case 0: progress_string[0]=String("FW v ") + VERSION_STRING;
-				progress_string[1]=__DATE__;
-				progress_string[2]=__TIME__;
-				break;
-			case 1: progress_string[0]=String(" FREE MEM  ");
-				progress_string[1]="SYSTEM   ";
-				progress_string[2]=String (freeMemory()) +String("    ");;
-				break;
-			case 4:
-				progress_string[0]=" FILAMENT ";
-				progress_string[2]=ftostr52a(total_filament/1000)+String ("m");
-				break;
-			case 3:
-				progress_string[0]=" PRINTING ";
-				progress_string[2]=String (EchoTimeSpan(total_printing_time,true));
-				break;
-			case 2:
-				progress_string[0]="POWERED ON ";
-				progress_string[2]=String (EchoTimeSpan(total_on_time,true));
-				break;
-			case 5:
-				progress_string[0]="EXTRD 0 ON ";
-				progress_string[2]=String (EchoTimeSpan(total_extruder_time0,true));
-				break;
-			case 6:
-				progress_string[0]="BED HTR ON ";
-				progress_string[2]=String (EchoTimeSpan(total_bed_time,true));
-				break;
-			case 7:
-				progress_string[0]="EXT AVGTEMP";
-				progress_string[2]=String(" ") +ftostr31(extruder0_degree_seconds/total_extruder_time0)+String("   ");
-				break;
-			case 8:
-				progress_string[0]="BED AVGTEMP";
-				progress_string[2]=String(" ") +ftostr31(bed_degree_seconds/total_bed_time)+String("   ");
-				break;
-			case 9:  progress_string[0]=String("  TIME ON  ");
-				progress_string[1]="SYSTEM   ";
-				progress_string[2]=EchoTimeSpan(now / 1000,true);
-				break;
-			}
-			// 			String temp = MACHINE_NAME;
-			// 			temp+=" ";
-			// 			temp += String (/*freeMemory()*/millis() % 255);
-			// 			LCD_MESSAGE (temp);
-
-			/*
-			// TODO testing blinking status LED
-			pinMode(STATUS_LED_PIN, OUTPUT);
-			digitalWrite(STATUS_LED_PIN, (millis() / 250) & 1);//((millis() / 250) & 1)*255);
-			*/
-		}
-		break;	// time since power on
-
-	case MOVING:
-	case PRINTING:		// cycle through four relevant but infrequently changed status variables:
-		// speed (feedrate) %
-		// flowrate %
-		// Z height
-		// fan speed %
-		{
-			int phase = (JobTime()/2) & 0x03;
-			if (phase != last_phase)
-			{
-				switch (phase)
-				{
-				case 0:
-					progress_string[1] = String("SPD:");
-					progress_string[1]+=String (feedmultiply);
-					progress_string[1]+="%  ";
-					break;
-				case 1:
-					progress_string[1] = String("FLO:");
-					progress_string[1]+=String (extrudemultiply);
-					progress_string[1]+="%  ";
-					break;
-				case 2:
-					progress_string[1] = String(ftostr((current_position[2]/(JobTime()+1)*3600),3,1)+String("mm/h"));
-					break;
-				case 3:
-					progress_string[1] = String("FAN:");
-					if (FanSpeed==0)
-						progress_string[1]+="OFF ";
-					else
-					{
-						progress_string[1]+=String (100*FanSpeed/255);
-						progress_string[1]+="% ";
-					}
-					break;
-				}
-			}
-			last_phase = phase;
-		}
-		// roll thru
-	case RETRACT:
-	case EXTRUDE:
-		// return to idle state if we were in an active moving state, our buffer is empty and haven't done anything in 3 seconds
-		if (blocks_queued()==NULL && time_since_command > 3)
-		{
-			state = IDLE;
-			return;
-		}
-		else
-			LCD_MESSAGE(String("MOVES: ") + String(itostr2(get_buffer_depth())) + String(" MEM:") + String(freeMemory()));
-		// roll thru
-	case HEATING:
-	case SAVING:
-
-		stoptime = now / 1000;		// update the job time elapsed
-		progress_string[0] = String ("E") ;
-		progress_string[0] += EchoTimeSpan(JobTime(),true);
-
-		if (state==HEATING) return;
-		if (state==SAVING)
-		{
-			progress_string[1] =String((gcode_N/JobTime())) + String(" N/S");
-		}
-		// are we printing from the SD card?  Then we know the percent done, which we can use to
-		// predict ending time.
-		if (controller == SDCARD || we_have_gcode_progress)
-		{
-			static unsigned long last_job_time =0 ;
-			if (!we_have_gcode_progress &&( JobTime() - last_job_time > 2))
-			{
-				percent = card.percentDone();
-				last_job_time = JobTime();
-			}
-
-			if (state!=HEATING && ((JobTime()) & 2) && percent > 1.0)		// alternate every second between ETA and % done
-			{
-				progress_string[2] = String("R");
-				progress_string[2] += EchoTimeSpan(	CalculateRemainingTime (percent, JobTime()),true);
-			}
-			else
-			{
-				progress_string[2] = String(ftostr(percent,2,2)) + String(" %  ");
-			}
-			return;		// bail out
-		}
-
-		// we aren't printing from SD card
-		// we don't know how big the file is, so all we can do is echo the line number we're on.
-		progress_string[2] = String ("N:") + String (gcode_N);
-		break;
-
-	case DONE:
-		switch ((JobTime()/2) % 4)
-		{
-		case 0: progress_string[1] = String ("X:") + String(ftostr32a(job_distance[X_AXIS]/1000)+String("m")); break;
-		case 1: progress_string[1] = String ("Y:") + String(ftostr32a(job_distance[Y_AXIS]/1000)+String("m")); break;
-		case 2: progress_string[1] = String ("Z:") + String(ftostr32a(job_distance[Z_AXIS]/1000)+String("m")); break;
-		case 3: progress_string[1] = String ("E:") + String(ftostr32a(job_distance[E_AXIS]/1000) +String("m")); break;
-		}
-		// rol thru
-
-	case ERROR:
-	case PAUSED:
-		pinMode(STATUS_LED_PIN, OUTPUT);
-		digitalWrite(STATUS_LED_PIN, ((millis() / 250) & 1)*255);
-
-		break ;	// don't alter the progress string here
-	}
-}
-
-void JobStart()
-{
-	stoptime = starttime = millis()/1000;
-	job_start_filament = total_filament;
-	int a;
-	for (a=0;a<NUM_AXIS;a++)
-		job_distance[a]=total_distance[a];
-	last_time_estimate = 1;
-	percent = 0;
-	we_have_gcode_progress = false;
-	/*beepshort();*/
-};
-
-unsigned long now = millis();
 
 void manage_other_tasks()
 {
+	now = millis();
 	manage_heater();
 	manage_inactivity();
+	state.Update();
 	LCD_STATUS;
-	now = millis();
 	int dt = (now - last_clock_update);
 
 	if (dt > 1000)
@@ -2769,7 +2213,7 @@ void manage_other_tasks()
 			extruder1_degree_seconds += degTargetHotend1() * dt;
 		}
 #endif
-		if (isActiveState() && state!=SAVING) total_printing_time += dt;
+		if (state.isActiveState() && state!=SAVING) total_printing_time += dt;
 
 		counter -= dt;
 		if (counter<=0)

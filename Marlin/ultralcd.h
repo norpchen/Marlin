@@ -1,6 +1,15 @@
 #ifndef ULTRALCD_H
 #define ULTRALCD_H
 #include "Marlin.h"
+
+// priority number determines what gets seen and for how long.  time = priority * LCD_UPDATE_INTERVAL (in ms)
+#define LCD_UPDATE_INTERVAL 250
+#define ALERT_PRIORITY 100
+#define USER_MESSAGE_PRIORITY 40
+#define WARNING_MESSAGE_PRIORITY 40
+#define ERROR_MESSAGE_PRIORITY 200
+#define DEFAULT_MESSAGE_PRIORITY 20
+
 #ifdef ULTRA_LCD
 #ifndef MCP23017_LCD
 	#ifdef PCF8574T_LCD
@@ -11,13 +20,14 @@
 #endif
   void lcd_status();
   void lcd_init();
-  void lcd_status(const char* message);
-  void lcd_status(const String message);
+  void lcd_status(const char* message, int priority=DEFAULT_MESSAGE_PRIORITY);
+  void lcd_status(const String message, int priority=DEFAULT_MESSAGE_PRIORITY);
+  void lcd_clear_message(int priority=-1);
   void beep();
+  void beepshort();
   void buttons_init();
   void buttons_check();
 
-  #define LCD_UPDATE_INTERVAL 250
   #define STATUSTIMEOUT 15000
   
 #ifdef MCP23017_LCD
@@ -162,15 +172,21 @@
 
   #define LCD_INIT lcd_init();
   #define LCD_MESSAGE(x) lcd_status(x);
+  #define LCD_MESSAGEPRI(x,y) lcd_status(x,y);
+  #define LCD_MESSAGEPGMPRI(x,y) lcd_statuspgm(MYPGM(x),y);
   #define LCD_MESSAGEPGM(x) lcd_statuspgm(MYPGM(x));
-  #define LCD_ALERTMESSAGEPGM(x) lcd_alertstatuspgm(MYPGM(x));
+  #define LCD_ALERTMESSAGEPGM(x) lcd_alertstatuspgm(MYPGM(x),-1);
   #define LCD_STATUS lcd_status()
+  #define LCD_MESSAGE_CLEAR lcd_clear_message()
+  #define LCD_MESSAGE_CLEARPRI(x) lcd_clear_message(x);
 #else //no lcd
   #define LCD_INIT
   #define LCD_STATUS
   #define LCD_MESSAGE(x)
   #define LCD_MESSAGEPGM(x)
   #define LCD_ALERTMESSAGEPGM(x)
+  #define LCD_MESSAGE_CLEAR
+  #define LCD_MESSAGE_CLEAR(x)
   FORCE_INLINE void lcd_status() {};
 
   #define CLICKED false
@@ -180,7 +196,7 @@
  
 #endif 
   
-void lcd_statuspgm(const char* message);
+void lcd_statuspgm(const char* message, int priority = DEFAULT_MESSAGE_PRIORITY);
 void lcd_alertstatuspgm(const char* message);
 
 #endif //ULTRALCD

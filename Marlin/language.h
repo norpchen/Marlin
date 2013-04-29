@@ -44,7 +44,7 @@
 #if LANGUAGE_CHOICE == 1
 
 // LCD Menu Messages
-	#define WELCOME_MSG MACHINE_NAME " / " __TIME__
+	#define WELCOME_MSG "I AM ALIVE"
 	#define MSG_SD_INSERTED "Card inserted"
 	#define MSG_SD_REMOVED "Card removed"
 	#define MSG_MAIN " Main \003"
@@ -59,6 +59,7 @@
 	#define MSG_COOLDOWN " Cooldown"
 	#define MSG_EXTRUDE " Extrude"
 	#define MSG_RETRACT " Retract"
+	#define MSG_METRICS " Reset Metrics     "
 	#define MSG_PREHEAT_PLA " Preheat PLA"
 	#define MSG_PREHEAT_ABS " Preheat ABS"
 	#define MSG_MOVE_AXIS " Move Axis      \x7E"
@@ -119,8 +120,8 @@
 	#define MSG_USERWAIT "Wait for user..."
 	#define MSG_NO_MOVE "No move."
 	#define MSG_PART_RELEASE "Partial Release"
-	#define MSG_KILLED "KILLED. "
-	#define MSG_STOPPED "STOPPED. "
+	#define MSG_KILLED "Printer KILLED. "
+	#define MSG_STOPPED "Printer has STOPPED."
 	#define MSG_STEPPER_RELEASED "Released."
   #define MSG_CONTROL_RETRACT  " Retract mm:"
   #define MSG_CONTROL_RETRACTF " Retract  F:"

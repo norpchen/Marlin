@@ -18,7 +18,7 @@ I've made the following changes:
 
 	Makerbot codes:
 	   - M300  -- trigger a beep
-	   - M420  -- set RGB mood light / BlinkM I2C RGB LED 
+	   - M420  -- set RGB mood light / BlinkM I2C RGB LED scripts
 
 	   Replicator codes: 
 	   - M73   -- set progress % -- will override internal progress calculations if provided by the slicer
@@ -27,6 +27,8 @@ I've made the following changes:
 * More feedback to LCD and Serial port echo.
 * Filesize is reported with the SD card file listings
 * Larger movement buffer and serial host buffers
+* Changed menu for flow rate control tuning to show percentage (extrudemultiply) instead of steps
+* added context aware BlinkM Scripts for states / modes
 
 Specific config.h settings I've changed for my bot:
 * default step rates (my Printrbot has GT2 2mm belts and a M6 threaded rod)
@@ -35,10 +37,13 @@ Specific config.h settings I've changed for my bot:
 * Baudrate kicked up to 5000000
 * Switch Y-Stop and E-Stop pins to work around SD card issue.
 
-Things that have NOT changed from Lincomatic's version:
+Things that have NOT changed from Lincomatic's version (unless noted above)
 * Movement and acceleration and stepper control logic
-* Heater control logic (other than the max temperature change) 
+* Heater control
 * LCD menus
+
+Known Issues:
+* I have not moved my new strings into language.h to facilitate translations / localization
 
 
 ----------------------------------------------------------------------------------

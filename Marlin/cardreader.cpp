@@ -18,7 +18,7 @@ CardReader::CardReader()
 	saving = false;
 	autostart_atmillis=0;
 
-	autostart_stilltocheck=true; //the sd start is delayed, because otherwise the serial cannot answer fast enought to make contact with the hostsoftware.
+	autostart_stilltocheck=true; //the sd start is delayed, because otherwise the serial cannot answer fast enough to make contact with the hostsoftware.
 	lastnr=0;
 	//power to SD reader
 #if SDPOWER > -1
@@ -309,7 +309,7 @@ void CardReader::openFile(char* name,bool read)
 					saving = true;
 					SERIAL_PROTOCOLPGM(MSG_SD_WRITE_TO_FILE);
 					SERIAL_PROTOCOLLN(name);
-					LCD_MESSAGE(String ("Save ")  + String(name));
+					LCD_MESSAGEPRI(String ("Save ")  + String(name),30999);
 
 				}
 		}
@@ -394,13 +394,13 @@ void CardReader::getStatus()
 			SERIAL_PROTOCOLPGM(" / ");
 			SERIAL_PROTOCOLLN(filesize);
 #if SHOW_SD_PROGRESS_PERCENT
-			float percentage = (sdpos * 100.0)  / (float) filesize;
-			SERIAL_PROTOCOL(ftostr31(percentage));
-			SERIAL_PROTOCOLLNPGM(" percent");
+		//	float percentage = (sdpos * 100.0)  / (float) filesize;
+			SERIAL_PROTOCOL(ftostr(job.Percent(),3,1));
+			SERIAL_PROTOCOLLNPGM(" %");
 			SERIAL_PROTOCOLPGM("Elapsed time : " );
-			SERIAL_PROTOCOLLN(EchoTimeSpan( (JobTime())));
-			SERIAL_PROTOCOLPGM("Estimated time remaining: " );
-			SERIAL_PROTOCOLLN(EchoTimeSpan(last_time_estimate));
+			SERIAL_PROTOCOLLN(EchoTimeSpan( (job.JobTime())));
+			SERIAL_PROTOCOLPGM("Est remaining: " );
+			SERIAL_PROTOCOLLN(EchoTimeSpan(job.CalculateRemainingTime()));
 #endif
 		}
 	else
@@ -557,6 +557,6 @@ void CardReader::printingHasFinished()
 			enquecommand(SD_FINISHED_RELEASECOMMAND);
 		}
 	autotempShutdown();
-	JobDone();
+	job.Stop();
 }
 #endif //SDSUPPORT

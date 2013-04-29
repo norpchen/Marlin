@@ -78,6 +78,8 @@ static long blocking[8]= {0,0,0,0,0,0,0,0};
 
 static MainMenu menu;
 
+int last_message_priority=0;
+
 void lcdProgMemprint(const char *str)
 {
 	char ch=pgm_read_byte(str);
@@ -98,22 +100,28 @@ int intround(const float &x)
 	return int(0.5+x);
 }
 
-void lcd_status(const char* message)
+void lcd_status(const char* message, int priority)
 {
+	if (last_message_priority > priority) return;
 	//	CRITICAL_SECTION_START;
+	last_message_priority = priority;
 	strncpy(messagetext,message,LCD_WIDTH);
 	messagetext[strlen(message)]=0;
 	//	CRITICAL_SECTION_END;
 }
 
-void lcd_status(const String message)
+void lcd_status(const String message,int priority)
 {
+	if (last_message_priority > priority) return;
+	last_message_priority = priority;
 	message.toCharArray (messagetext,LCD_WIDTH);
 }
 
-void lcd_statuspgm(const char* message)
+void lcd_statuspgm(const char* message,int priority)
 {
+	if (last_message_priority > priority) return;
 	//	CRITICAL_SECTION_START;
+	last_message_priority = priority;
 	char ch=pgm_read_byte(message);
 	char *target=messagetext;
 	uint8_t cnt=0;
@@ -130,8 +138,17 @@ void lcd_statuspgm(const char* message)
 
 void lcd_alertstatuspgm(const char* message)
 {
-	lcd_statuspgm(message);
+	lcd_statuspgm(message,	ALERT_PRIORITY);
 	menu.showStatus();
+}
+
+void lcd_clear_message( int priority/*=-1*/ )
+{
+	if (last_message_priority < priority || priority <0)
+	{
+		last_message_priority = -1;
+		strncpy(messagetext,"                                 ",LCD_WIDTH);
+	}
 }
 
 FORCE_INLINE void clear()
@@ -204,8 +221,8 @@ void lcd_init()
 	byte sdcard [8]=
 	{
 		B00000,
-		B11110,
-		B10001,
+		B11100,
+		B10010,
 		B10001,
 		B10001,
 		B10001,
@@ -223,6 +240,18 @@ void lcd_init()
 		B00010,
 		B00000
 	};
+	byte panel [8]=
+	{
+		B00000,
+		B01110,
+		B10001,
+		B10101,
+		B10001,
+		B01110,
+		B00000,
+		B00000
+	};
+
 #ifdef MCP23017_LCD
 	lcd.setMCPType(LTI_TYPE_MCP23017);
 #endif
@@ -234,6 +263,7 @@ void lcd_init()
 	lcd.createChar(5,folder);
 	lcd.createChar(6,sdcard);
 	lcd.createChar(7,serial);
+	lcd.createChar(8,panel);
 	LCD_MESSAGEPGM(WELCOME_MSG);
 #ifdef PANUCATT_VIKI
 	lcd.setBacklight(0);
@@ -327,19 +357,24 @@ void lcd_status()
 	}
 
 	// no change to buttons, not time to update LCD panel
-	if((buttons==oldbuttons) &&  (now - previous_millis_lcd) < LCD_UPDATE_INTERVAL)   
+	if((buttons==oldbuttons) &&  (now - previous_millis_lcd) < LCD_UPDATE_INTERVAL)
 		return;
+
 	oldbuttons=buttons;
 #else		// ULTIPLANEL
 
 	if(((millis() - previous_millis_lcd) < LCD_UPDATE_INTERVAL)   )
 		return;
 #endif
-
+	if (last_message_priority>0)
+	{
+		last_message_priority--;
+		if (last_message_priority==0)
+				strncpy(messagetext,"                                 ",LCD_WIDTH);
+	}
 	previous_millis_lcd=now;
 	menu.update();
 }
-
 
 #ifdef ULTIPANEL
 
@@ -466,7 +501,7 @@ void MainMenu::displayTemps()
 		lcdprintPGM("\002---/OFF\001 ");
 #if defined BED_USES_THERMISTOR || defined BED_USES_AD595
 		lcd.setCursor(10,0);
-		lcdprintPGM("B ---/OFF\001 ");
+		lcdprintPGM("B:---/OFF\001 ");
 #elif EXTRUDERS > 1
 		lcd.setCursor(10,0);
 		lcdprintPGM("\002---/OFF\001 ");
@@ -533,6 +568,8 @@ String last_drawn_progress_string[3] ;
 
 void MainMenu::showStatus()
 {
+	bool reentracy_blocker = false;
+	if (reentracy_blocker) return; reentracy_blocker = true;
 #if LCD_HEIGHT==4
 	static int force_update_ticker=0;
 	static STATES prev_state = MAX_STATES;
@@ -540,8 +577,6 @@ void MainMenu::showStatus()
 	if (state!=prev_state) force_lcd_update=true;
 	prev_state = state;
 	//force_lcd_update=true;
-
-	UpdateProgressAndState();
 
 	displayTemps();
 
@@ -566,9 +601,9 @@ void MainMenu::showStatus()
 		encoderpos=curfeedmultiply;
 	}
 	lcd.setCursor(0,1);
-	if (controller==SDCARD) lcd.print ("\006");
-	else if (controller==SERIAL_HOST) lcd.print ("\007");
-	else lcd.print (" ");
+	if (state.Controller()==SDCARD) lcd.print ("\006");
+	else if (state.Controller()==SERIAL_HOST) lcd.print ("\007");
+	else lcd.print ("\008");		// panel
 	if (force_lcd_update) lcd.print (STATE_STRINGS[state]);
 	if (progress_string[0]!=last_drawn_progress_string[0] || force_lcd_update)
 	{
@@ -637,6 +672,7 @@ void MainMenu::showStatus()
 
 #endif
 	force_lcd_update=false;
+	reentracy_blocker = false;
 }
 
 enum {ItemP_exit, ItemP_autostart,ItemP_disstep,ItemP_home, ItemP_origin, ItemP_preheat_pla, ItemP_preheat_abs, ItemP_cooldown,/*ItemP_extrude,*/ItemP_move,ItemP_resetMetrics};
@@ -703,7 +739,7 @@ void MainMenu::showPrepare()
 			MENUITEM(  lcdprintPGM(MSG_MOVE_AXIS) , BLOCK; status=Sub_PrepareMove; beepshort(); );
 			break;
 		case ItemP_resetMetrics:
-			MENUITEM(  lcdprintPGM("Reset Metrics") , BLOCK; ResetMetrics(); beepshort(); );
+			MENUITEM(  lcdprintPGM(MSG_METRICS) , BLOCK; ResetMetrics(); beepshort(); );
 			break;
 
 		default:
@@ -741,7 +777,7 @@ void MainMenu::showAxisMove()
 					lcd.setCursor(0,line);
 					lcdprintPGM(" X:");
 					lcd.setCursor(11,line);
-					lcd.print(ftostr52(current_position[X_AXIS]));
+					lcd.print(ftostr52(current_head_position[X_AXIS]));
 				}
 
 				if((activeline!=line) )
@@ -778,7 +814,7 @@ void MainMenu::showAxisMove()
 						encoderpos=0;
 					}
 					lcd.setCursor(11,line);
-					lcd.print(ftostr52(current_position[X_AXIS]));
+					lcd.print(ftostr52(current_head_position[X_AXIS]));
 				}
 			}
 			break;
@@ -789,7 +825,7 @@ void MainMenu::showAxisMove()
 					lcd.setCursor(0,line);
 					lcdprintPGM(" Y:");
 					lcd.setCursor(11,line);
-					lcd.print(ftostr52(current_position[Y_AXIS]));
+					lcd.print(ftostr52(current_head_position[Y_AXIS]));
 				}
 
 				if((activeline!=line) )
@@ -826,7 +862,7 @@ void MainMenu::showAxisMove()
 						encoderpos=0;
 					}
 					lcd.setCursor(11,line);
-					lcd.print(ftostr52(current_position[Y_AXIS]));
+					lcd.print(ftostr52(current_head_position[Y_AXIS]));
 				}
 			}
 			break;
@@ -837,7 +873,7 @@ void MainMenu::showAxisMove()
 					lcd.setCursor(0,line);
 					lcdprintPGM(" Z:");
 					lcd.setCursor(11,line);
-					lcd.print(ftostr52(current_position[Z_AXIS]));
+					lcd.print(ftostr52(current_head_position[Z_AXIS]));
 				}
 
 				if((activeline!=line) )
@@ -874,7 +910,7 @@ void MainMenu::showAxisMove()
 						encoderpos=0;
 					}
 					lcd.setCursor(11,line);
-					lcd.print(ftostr52(current_position[Z_AXIS]));
+					lcd.print(ftostr52(current_head_position[Z_AXIS]));
 				}
 			}
 			break;
@@ -920,7 +956,7 @@ void MainMenu::showTune()
 					lcd.setCursor(0,line);
 					lcdprintPGM(MSG_SPEED);
 					lcd.setCursor(13,line);
-					lcd.print(ftostr3(feedmultiply));
+					lcd.print(itostr3((int) feedmultiply));
 				}
 
 				if((activeline!=line) )
@@ -1073,38 +1109,34 @@ void MainMenu::showTune()
 					lcd.setCursor(0,line);
 					lcdprintPGM(MSG_FLOW);
 					lcd.setCursor(13,line);
-					lcd.print(ftostr(extrudemultiply,3,2));
+					lcd.print(itostr3((int) extrudemultiply));
 				}
 
 				if((activeline!=line) )
 					break;
 
-				if(CLICKED)
+				if(CLICKED) //AnalogWrite(FAN_PIN,  fanpwm);
 				{
 					linechanging=!linechanging;
 					if(linechanging)
 					{
-						//encoderpos=(long)(axis_steps_per_unit[E_AXIS]*100.0);
-						encoderpos=(extrudemultiply);
-						
+						encoderpos=extrudemultiply;
 					}
 					else
 					{
-// 						float factor=float(encoderpos)/100.0/float(axis_steps_per_unit[E_AXIS]);
-// 						position[E_AXIS]=lround(position[E_AXIS]*factor);
-// 						//current_position[E_AXIS]*=factor;
-// 						axis_steps_per_unit[E_AXIS]= encoderpos/100.0;
-						encoderpos=extrudemultiply*lcdslow;
+						encoderpos=activeline*lcdslow;
+						beepshort();
 					}
 					BLOCK;
-					beepshort();
 				}
+
+				
 				if(linechanging)
 				{
 					if(encoderpos<5) encoderpos=5;
 					if(encoderpos>250) encoderpos=250;
 					lcd.setCursor(13,line);
-					lcd.print(ftostr52(encoderpos/100.0));
+					lcd.print(itostr3(encoderpos));
 				}
 			}
 			break;
@@ -1994,7 +2026,7 @@ void MainMenu::showControlMotion()
 					{
 						float factor=float(encoderpos)/100.0/float(axis_steps_per_unit[X_AXIS]);
 						position[X_AXIS]=lround(position[X_AXIS]*factor);
-						//current_position[X_AXIS]*=factor;
+						//current_head_position[X_AXIS]*=factor;
 						axis_steps_per_unit[X_AXIS]= encoderpos/100.0;
 						encoderpos=activeline*lcdslow;
 					}
@@ -2034,7 +2066,7 @@ void MainMenu::showControlMotion()
 					{
 						float factor=float(encoderpos)/100.0/float(axis_steps_per_unit[Y_AXIS]);
 						position[Y_AXIS]=lround(position[Y_AXIS]*factor);
-						//current_position[Y_AXIS]*=factor;
+						//current_head_position[Y_AXIS]*=factor;
 						axis_steps_per_unit[Y_AXIS]= encoderpos/100.0;
 						encoderpos=activeline*lcdslow;
 					}
@@ -2074,7 +2106,7 @@ void MainMenu::showControlMotion()
 					{
 						float factor=float(encoderpos)/100.0/float(axis_steps_per_unit[Z_AXIS]);
 						position[Z_AXIS]=lround(position[Z_AXIS]*factor);
-						//current_position[Z_AXIS]*=factor;
+						//current_head_position[Z_AXIS]*=factor;
 						axis_steps_per_unit[Z_AXIS]= encoderpos/100.0;
 						encoderpos=activeline*lcdslow;
 					}
@@ -2115,7 +2147,7 @@ void MainMenu::showControlMotion()
 					{
 						float factor=float(encoderpos)/100.0/float(axis_steps_per_unit[E_AXIS]);
 						position[E_AXIS]=lround(position[E_AXIS]*factor);
-						//current_position[E_AXIS]*=factor;
+						//current_head_position[E_AXIS]*=factor;
 						axis_steps_per_unit[E_AXIS]= encoderpos/100.0;
 						encoderpos=activeline*lcdslow;
 					}
@@ -2724,7 +2756,7 @@ void MainMenu::showMainMenu()
 						else
 						{
 							card.startFileprint();
-							JobStart();
+							job.Start();
 							beepshort();
 							status = Main_Status;
 						}
