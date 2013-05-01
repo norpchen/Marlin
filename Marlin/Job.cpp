@@ -23,6 +23,7 @@ void Job::init()
 	sdpercentage = percent=0;
 	we_have_gcode_progress = false;
 	jobstate = STOPPED;
+	count =0;
 	for (int a=0;a<NUM_AXIS;a++)
 		job_distance[a]=total_distance[a];
 
@@ -50,6 +51,7 @@ void Job::Start( bool force/*=false*/ )
 void Job::Stop(bool cancelled)
 {
 	if (jobstate == STOPPED) return;
+	count++;
 	state = DONE;
 	jobstate = STOPPED;
 	percent = 100;
@@ -78,9 +80,9 @@ unsigned long Job::CalculateRemainingTime()
 {
 	if (percent<0.1) return 0;
 	static float last_percent = -1;
-	if (last_percent == percent ) return last_time_estimate;
-	last_percent= percent;
-	unsigned long total_time = JobTime() / ( percent / 100.0);
+	if (last_percent == (percent+sdpercentage)/2 ) return last_time_estimate;
+	last_percent= (percent+sdpercentage)/2;
+	unsigned long total_time = JobTime() / ( last_percent / 100.0);
 	last_time_estimate = total_time - JobTime();
 	return last_time_estimate;
 }

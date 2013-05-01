@@ -4,7 +4,7 @@
 #ifndef MARLIN_H
 #define MARLIN_H
 
-#define VERSION_STRING  "1.1.0"
+#define VERSION_STRING  "1.1.1"
 
 #define  HardwareSerial_h // trick to disable the standard HWserial
 

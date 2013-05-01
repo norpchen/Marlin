@@ -23,7 +23,8 @@ class Job
 	 unsigned long stoptime;
 	 unsigned long pausedtime;
 	 unsigned long last_time_estimate;
-// job metrics
+	 int count;
+	 // job metrics
 	 float job_start_filament;
 	 float job_distance[NUM_AXIS];
 public:
@@ -31,6 +32,7 @@ public:
 private: 
 	JOBSTATE jobstate;
 public:
+	int Count() const { return count; }
 	void init();
 	void Start(bool force=false);
 	void Stop(bool cancelled = false);

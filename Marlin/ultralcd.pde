@@ -747,7 +747,7 @@ void MainMenu::showPrepare()
 		}
 		line++;
 	}
-	updateActiveLines(ItemP_move,encoderpos);
+	updateActiveLines(ItemP_resetMetrics,encoderpos);
 #endif
 }
 
@@ -2649,7 +2649,7 @@ void MainMenu::showSD()
 #endif
 }
 
-enum {ItemM_watch, ItemM_prepare, ItemM_control, ItemM_file, ItemM_pause};
+enum {ItemM_watch, ItemM_prepare, ItemM_control, ItemM_file, ItemM_pause,ItemM_allOff,ItemM_lastjob};
 void MainMenu::showMainMenu()
 {
 #ifndef ULTIPANEL
@@ -2769,6 +2769,15 @@ void MainMenu::showMainMenu()
 		case ItemM_pause:
 			break;
 #endif
+
+		case ItemM_allOff:
+			MENUITEM(  lcdprintPGM(" all off")  ,  BLOCK; FanSpeed=0; setTargetHotend0(0); setTargetHotend1(0); setTargetHotend2(0); setTargetBed(0); enquecommand("M84"); beepshort(); ) ;
+			break;
+
+		case ItemM_lastjob:
+			MENUITEM(  lcdprintPGM(" Last Job Info")  ,  BLOCK; if (job.Count() >0) state=DONE;  beepshort(); ) ;
+			break;
+
 		default:
 			SERIAL_ERROR_START;
 			SERIAL_ERRORLNPGM(MSG_SERIAL_ERROR_MENU_STRUCTURE);
@@ -2777,11 +2786,11 @@ void MainMenu::showMainMenu()
 		line++;
 	}
 
-	uint8_t numberOfLines = 4;
+	uint8_t numberOfLines = 6;
 #ifdef SDSUPPORT
-	numberOfLines = 4;
+	numberOfLines = 6;
 #else
-	numberOfLines = 3;
+	numberOfLines = 4;
 #endif
 	updateActiveLines(numberOfLines,encoderpos);
 }

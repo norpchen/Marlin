@@ -193,8 +193,10 @@ void State::Update ()
 			} 
 			else
 			{
-			//	if (current_state!=HEATING) 
-			//		SetLEDColor(r,g,b,false);
+#ifdef SET_LED_COLOR_BY_ACTION
+				if (current_state!=HEATING) 
+					SetLEDColor(r,g,b,false);
+#endif
 			}
 
 
@@ -275,6 +277,10 @@ State & State::operator=( STATES newstate )
 	STATES previous_state = current_state;
 	switch (current_state)
 	{
+		// don't  go to sleep or idle state from DONE
+		case DONE: 
+			if (newstate == SLEEPING || newstate == IDLE)	return *this;
+			break;
 	}
 	current_state= newstate;
 

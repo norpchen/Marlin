@@ -2,8 +2,9 @@
 #define ULTRALCD_H
 #include "Marlin.h"
 
+#define LCD_UPDATE_INTERVAL 350
+
 // priority number determines what gets seen and for how long.  time = priority * LCD_UPDATE_INTERVAL (in ms)
-#define LCD_UPDATE_INTERVAL 250
 #define ALERT_PRIORITY 100
 #define USER_MESSAGE_PRIORITY 40
 #define WARNING_MESSAGE_PRIORITY 40
