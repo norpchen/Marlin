@@ -59,12 +59,16 @@ static long acceleration_time, deceleration_time;
 static unsigned short acc_step_rate; // needed for deccelaration start point
 static char step_loops;
 static unsigned short OCR1A_nominal;
+static unsigned short step_loops_nominal;
 
 volatile long endstops_trigsteps[3]={0,0,0};
 volatile long endstops_stepsTotal,endstops_stepsDone;
 static volatile bool endstop_x_hit=false;
 static volatile bool endstop_y_hit=false;
 static volatile bool endstop_z_hit=false;
+#ifdef ABORT_ON_ENDSTOP_HIT_FEATURE_ENABLED
+bool abort_on_endstop_hit = false;
+#endif
 
 static bool old_x_min_endstop=false;
 static bool old_x_max_endstop=false;
@@ -76,7 +80,7 @@ static bool old_z_max_endstop=false;
 static bool check_endstops = true;
 
 volatile long count_position[NUM_AXIS] = { 0, 0, 0, 0};
-volatile char count_direction[NUM_AXIS] = { 1, 1, 1, 1};
+volatile signed char count_direction[NUM_AXIS] = { 1, 1, 1, 1};
 
 //===========================================================================
 //=============================functions         ============================
@@ -181,6 +185,17 @@ void checkHitEndstops()
    endstop_x_hit=false;
    endstop_y_hit=false;
    endstop_z_hit=false;
+#ifdef ABORT_ON_ENDSTOP_HIT_FEATURE_ENABLED
+   if (abort_on_endstop_hit)
+   {
+     card.sdprinting = false;
+     card.closefile();
+     quickStop();
+     setTargetHotend0(0);
+     setTargetHotend1(0);
+     setTargetHotend2(0);
+   }
+#endif
  }
 }
 
@@ -271,6 +286,8 @@ FORCE_INLINE void trapezoid_generator_reset() {
   deceleration_time = 0;
   // step_rate to timer interval
   OCR1A_nominal = calc_timer(current_block->nominal_rate);
+  // make a note of the number of step loops required at nominal speed
+  step_loops_nominal = step_loops;
   acc_step_rate = current_block->initial_rate;
   acceleration_time = calc_timer(acc_step_rate);
   OCR1A = acceleration_time;
@@ -479,7 +496,7 @@ ISR(TIMER1_COMPA_vect)
 
 	
 	for(int8_t i=0; i < step_loops; i++) { // Take multiple steps per interrupt (For high speed moves) 
-	  #if !defined(__AVR_AT90USB1286__) && !defined(__AVR_AT90USB1287__)
+      	  #if !defined(__AVR_AT90USB1286__) && !defined(__AVR_AT90USB1287__)
 	  MSerial.checkRx(); // Check for serial chars.
 	  #endif 
 	  
@@ -648,6 +665,8 @@ ISR(TIMER1_COMPA_vect)
 	}
 	else {
 	  OCR1A = OCR1A_nominal;
+      // ensure we're running at the correct step rate, even if we just came off an acceleration
+      step_loops = step_loops_nominal;
 	}
 
 	// If current block is finished, reset pointer 

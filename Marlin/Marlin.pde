@@ -43,8 +43,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "BlinkM_funcs.h"
 #endif
 
-
-
 /*
 This firmware is a mashup between Sprinter and grbl.
 (https://github.com/kliment/Sprinter)
@@ -187,7 +185,7 @@ static float offset[3] = {0.0, 0.0, 0.0};
 static bool home_all_axis = true;
 static float feedrate = 1500.0, next_feedrate, saved_feedrate;
 long gcode_N, gcode_LastN, Stopped_gcode_LastN = 0;
-	long save_gcode_start ;
+long save_gcode_start ;
 
 static bool relative_mode = false;  //Determines Absolute or Relative Coordinates
 static bool relative_mode_e = false;  //Determines Absolute or Relative E Codes while in Absolute Coordinates mode. E is always relative in Relative Coordinates mode.
@@ -395,7 +393,7 @@ void setup()
 }
 
 //-------------------------------------------------------------------------------------------------------------------
-	void loop()
+void loop()
 {
 	if(buflen < (BUFSIZE-1))
 		get_command();
@@ -515,15 +513,12 @@ void get_command()
 						return;
 					}
 
-					
-
-				/*	 this didn't work.  :( 
+					/*	 this didn't work.  :(
 
 					if((strstr(cmdbuffer[bufindw], "M117") != NULL))		// some hosts sent M117 without checksum or line number  thank you very much
 					{
-						gcode_LastN++;		// advance the line number by one to avoid the line number mismatch error handling on next line.
+					gcode_LastN++;		// advance the line number by one to avoid the line number mismatch error handling on next line.
 					}*/
-
 				}
 				if((strstr(cmdbuffer[bufindw], "G") != NULL))
 				{
@@ -544,8 +539,8 @@ void get_command()
 						}
 						else
 						{
-// 							SERIAL_ERRORLNPGM(MSG_ERR_STOPPED);
-// 							LCD_MESSAGEPGM(MSG_STOPPED);
+							// 							SERIAL_ERRORLNPGM(MSG_ERR_STOPPED);
+							// 							LCD_MESSAGEPGM(MSG_STOPPED);
 							Warning (MSG_STOPPED);
 						}
 						break;
@@ -719,8 +714,8 @@ void process_commands()
 		{
 		case 0: // G0 -> G1
 		case 1: // G1
-// 			SERIAL_ECHO_START;
-// 			SERIAL_ECHOLN("G0/G1");
+			// 			SERIAL_ECHO_START;
+			// 			SERIAL_ECHOLN("G0/G1");
 
 			if(!Stopped)
 			{
@@ -736,9 +731,9 @@ void process_commands()
 			break;
 			//break;
 		case 2: // G2  - CW ARC
-// 			SERIAL_ECHO_START;
-// 			SERIAL_ECHOLN("G2");
- 			if(!Stopped)
+			// 			SERIAL_ECHO_START;
+			// 			SERIAL_ECHOLN("G2");
+			if(!Stopped)
 			{
 				get_arc_coordinates();
 				prepare_arc_move(true);
@@ -751,8 +746,8 @@ void process_commands()
 
 			break;
 		case 3: // G3  - CCW ARC
-// 			SERIAL_ECHO_START;
-// 			SERIAL_ECHOLN("C3");
+			// 			SERIAL_ECHO_START;
+			// 			SERIAL_ECHOLN("C3");
 			if(!Stopped)
 			{
 				get_arc_coordinates();
@@ -1037,7 +1032,7 @@ void process_commands()
 		case 28: //M28 - Start SD write
 			state = SAVING;
 			job.Start();
-		
+
 			starpos = (strchr(strchr_pointer + 4,'*'));
 			if(starpos != NULL)
 			{
@@ -1066,6 +1061,15 @@ void process_commands()
 				}
 				card.removeFile(strchr_pointer + 4);
 			}
+			break;
+		case 928: //M928 - Start SD write
+			starpos = (strchr(strchr_pointer + 5,'*'));
+			if(starpos != NULL){
+				char* npos = strchr(cmdbuffer[bufindr], 'N');
+				strchr_pointer = strchr(npos,' ') + 1;
+				*(starpos-1) = '\0';
+			}
+			card.openLogFile(strchr_pointer+5);
 			break;
 
 #endif //SDSUPPORT
@@ -1156,7 +1160,6 @@ void process_commands()
 					break;
 				}
 
-
 #ifdef AUTOTEMP
 				autotemp_enabled=false;
 #endif
@@ -1236,7 +1239,7 @@ void process_commands()
 		case 190: // M190 - Wait for bed heater to reach target.
 #if TEMP_BED_PIN > -1
 			job.Start();
-			
+
 			state = HEATING;
 			progress_string[2] = String ("   BED   ") ;
 
@@ -1307,7 +1310,7 @@ void process_commands()
 			break;
 		case 18: //compatibility
 		case 84: // M84
-			if (!state.isActiveState()) state = SLEEPING; else job.Stop();
+			if (!state.isActiveState()) state = IDLE; else job.Stop();
 			if(code_seen('S'))
 			{
 				stepper_inactive_time = code_value() * 1000;
@@ -1381,7 +1384,11 @@ void process_commands()
 			break;
 		case 117: // M117 display message
 		case 70:  // M70 display message (replicator)
-			LCD_MESSAGEPRI(cmdbuffer[bufindr]+5, USER_MESSAGE_PRIORITY);
+			starpos = (strchr(strchr_pointer + 5,'*'));
+			if(starpos!=NULL)
+				*(starpos-1)='\0';
+			//  lcd_setstatus(strchr_pointer + 5);
+			LCD_MESSAGEPRI(strchr_pointer+5, USER_MESSAGE_PRIORITY);
 			break;
 		case 114: // M114  report current position
 			SERIAL_PROTOCOLPGM("X:");
@@ -1534,8 +1541,33 @@ void process_commands()
 						SERIAL_ECHOLNPGM("\"");
 					}
 				}
-			}
-			break;
+			}break;
+#endif // FWRETRACT
+#if EXTRUDERS > 1
+		case 218: // M218 - set hotend offset (in mm), T<extruder_number> X<offset_on_X> Y<offset_on_Y>
+			{
+				if(setTargetedHotend(218)){
+					break;
+				}
+				if(code_seen('X'))
+				{
+					extruder_offset[X_AXIS][tmp_extruder] = code_value();
+				}
+				if(code_seen('Y'))
+				{
+					extruder_offset[Y_AXIS][tmp_extruder] = code_value();
+				}
+				SERIAL_ECHO_START;
+				SERIAL_ECHOPGM(MSG_HOTEND_OFFSET);
+				for(tmp_extruder = 0; tmp_extruder < EXTRUDERS; tmp_extruder++)
+				{
+					SERIAL_ECHO(" ");
+					SERIAL_ECHO(extruder_offset[X_AXIS][tmp_extruder]);
+					SERIAL_ECHO(",");
+					SERIAL_ECHO(extruder_offset[Y_AXIS][tmp_extruder]);
+				}
+				SERIAL_ECHOLN("");
+			}break;
 #endif
 		case 220: // M220 S<factor in percent>- set speed factor override percentage
 			{
@@ -1559,12 +1591,27 @@ void process_commands()
 			}
 			break;
 
+#if defined(LARGE_FLASH) && LARGE_FLASH == true && defined(BEEPER) && BEEPER > -1
+		case 300: // M300
+			{
+				int beepS = 1;
+				int beepP = 1000;
+				if(code_seen('S')) beepS = code_value();
+				if(code_seen('P')) beepP = code_value();
+				tone(BEEPER, beepS);
+				delay(beepP);
+				noTone(BEEPER);
+			}
+			break;
+#endif // M300
+
 #ifdef PIDTEMP
 		case 301: // M301
 			{
 				if(code_seen('P')) Kp = code_value();
-				if(code_seen('I')) Ki = code_value()*PID_dT;
-				if(code_seen('D')) Kd = code_value()/PID_dT;
+				if(code_seen('I')) Ki = scalePID_i(code_value());
+				if(code_seen('D')) Kd = scalePID_d(code_value());
+
 #ifdef PID_ADD_EXTRUSION_RATE
 				if(code_seen('C')) Kc = code_value();
 #endif
@@ -1572,13 +1619,13 @@ void process_commands()
 				SERIAL_PROTOCOLPGM(MSG_OK);
 				SERIAL_PROTOCOLPGM(" p:");
 				SERIAL_PROTOCOL(Kp);
-				SERIAL_PROTOCOLPGM(" i:");
-				SERIAL_PROTOCOL(Ki/PID_dT);
-				SERIAL_PROTOCOLPGM(" d:");
-				SERIAL_PROTOCOL(Kd*PID_dT);
+				SERIAL_PROTOCOL(" i:");
+				SERIAL_PROTOCOL(unscalePID_i(Ki));
+				SERIAL_PROTOCOL(" d:");
+				SERIAL_PROTOCOL(unscalePID_d(Kd));
 #ifdef PID_ADD_EXTRUSION_RATE
 				SERIAL_PROTOCOLPGM(" c:");
-				SERIAL_PROTOCOL(Kc*PID_dT);
+				SERIAL_PROTOCOL(Kc);
 #endif
 				SERIAL_PROTOCOLLN("");
 			}
@@ -1588,16 +1635,17 @@ void process_commands()
 		case 304: // M304
 			{
 				if(code_seen('P')) bedKp = code_value();
-				if(code_seen('I')) bedKi = code_value()*PID_dT;
-				if(code_seen('D')) bedKd = code_value()/PID_dT;
+				if(code_seen('I')) bedKi = scalePID_i(code_value());
+				if(code_seen('D')) bedKd = scalePID_d(code_value());
+
 				updatePID();
 				SERIAL_PROTOCOLPGM(MSG_OK);
 				SERIAL_PROTOCOLPGM(" p:");
 				SERIAL_PROTOCOL(bedKp);
-				SERIAL_PROTOCOLPGM(" i:");
-				SERIAL_PROTOCOL(bedKi/PID_dT);
-				SERIAL_PROTOCOLPGM(" d:");
-				SERIAL_PROTOCOL(bedKd*PID_dT);
+				SERIAL_PROTOCOL(" i:");
+				SERIAL_PROTOCOL(unscalePID_i(bedKi));
+				SERIAL_PROTOCOL(" d:");
+				SERIAL_PROTOCOL(unscalePID_d(bedKd));
 				SERIAL_PROTOCOLLN("");
 			}
 			break;
@@ -1691,6 +1739,138 @@ void process_commands()
 				EEPROM_printSettings();
 			}
 			break;
+
+#ifdef ABORT_ON_ENDSTOP_HIT_FEATURE_ENABLED
+		case 540:
+			{
+				if(code_seen('S')) abort_on_endstop_hit = code_value() > 0;
+			}
+			break;
+#endif
+#ifdef FILAMENTCHANGEENABLE
+		case 600: //Pause for filament change X[pos] Y[pos] Z[relative lift] E[initial retract] L[later retract distance for removal]
+			{
+				float target[4];
+				float lastpos[4];
+				target[X_AXIS]=current_position[X_AXIS];
+				target[Y_AXIS]=current_position[Y_AXIS];
+				target[Z_AXIS]=current_position[Z_AXIS];
+				target[E_AXIS]=current_position[E_AXIS];
+				lastpos[X_AXIS]=current_position[X_AXIS];
+				lastpos[Y_AXIS]=current_position[Y_AXIS];
+				lastpos[Z_AXIS]=current_position[Z_AXIS];
+				lastpos[E_AXIS]=current_position[E_AXIS];
+				//retract by E
+				if(code_seen('E'))
+				{
+					target[E_AXIS]+= code_value();
+				}
+				else
+				{
+#ifdef FILAMENTCHANGE_FIRSTRETRACT
+					target[E_AXIS]+= FILAMENTCHANGE_FIRSTRETRACT ;
+#endif
+				}
+				plan_buffer_line(target[X_AXIS], target[Y_AXIS], target[Z_AXIS], target[E_AXIS], feedrate/60, active_extruder);
+
+				//lift Z
+				if(code_seen('Z'))
+				{
+					target[Z_AXIS]+= code_value();
+				}
+				else
+				{
+#ifdef FILAMENTCHANGE_ZADD
+					target[Z_AXIS]+= FILAMENTCHANGE_ZADD ;
+#endif
+				}
+				plan_buffer_line(target[X_AXIS], target[Y_AXIS], target[Z_AXIS], target[E_AXIS], feedrate/60, active_extruder);
+
+				//move xy
+				if(code_seen('X'))
+				{
+					target[X_AXIS]+= code_value();
+				}
+				else
+				{
+#ifdef FILAMENTCHANGE_XPOS
+					target[X_AXIS]= FILAMENTCHANGE_XPOS ;
+#endif
+				}
+				if(code_seen('Y'))
+				{
+					target[Y_AXIS]= code_value();
+				}
+				else
+				{
+#ifdef FILAMENTCHANGE_YPOS
+					target[Y_AXIS]= FILAMENTCHANGE_YPOS ;
+#endif
+				}
+
+				plan_buffer_line(target[X_AXIS], target[Y_AXIS], target[Z_AXIS], target[E_AXIS], feedrate/60, active_extruder);
+
+				if(code_seen('L'))
+				{
+					target[E_AXIS]+= code_value();
+				}
+				else
+				{
+#ifdef FILAMENTCHANGE_FINALRETRACT
+					target[E_AXIS]+= FILAMENTCHANGE_FINALRETRACT ;
+#endif
+				}
+
+				plan_buffer_line(target[X_AXIS], target[Y_AXIS], target[Z_AXIS], target[E_AXIS], feedrate/60, active_extruder);
+
+				//finish moves
+				st_synchronize();
+				//disable extruder steppers so filament can be removed
+				disable_e0();
+				disable_e1();
+				disable_e2();
+				delay(100);
+				LCD_ALERTMESSAGEPGM(MSG_FILAMENTCHANGE);
+				uint8_t cnt=0;
+				while(!LCD_CLICKED){
+					cnt++;
+					manage_heater();
+					manage_inactivity();
+					lcd_update();
+
+#if BEEPER > -1
+					if(cnt==0)
+					{
+						SET_OUTPUT(BEEPER);
+
+						WRITE(BEEPER,HIGH);
+						delay(3);
+						WRITE(BEEPER,LOW);
+						delay(3);
+					}
+#endif
+				}
+
+				//return to normal
+				if(code_seen('L'))
+				{
+					target[E_AXIS]+= -code_value();
+				}
+				else
+				{
+#ifdef FILAMENTCHANGE_FINALRETRACT
+					target[E_AXIS]+=(-1)*FILAMENTCHANGE_FINALRETRACT ;
+#endif
+				}
+				current_position[E_AXIS]=target[E_AXIS]; //the long retract of L is compensated by manual filament feeding
+				plan_set_e_position(current_position[E_AXIS]);
+				plan_buffer_line(target[X_AXIS], target[Y_AXIS], target[Z_AXIS], target[E_AXIS], feedrate/60, active_extruder); //should do nothing
+				plan_buffer_line(lastpos[X_AXIS], lastpos[Y_AXIS], target[Z_AXIS], target[E_AXIS], feedrate/60, active_extruder); //move xy back
+				plan_buffer_line(lastpos[X_AXIS], lastpos[Y_AXIS], lastpos[Z_AXIS], target[E_AXIS], feedrate/60, active_extruder); //move z back
+				plan_buffer_line(lastpos[X_AXIS], lastpos[Y_AXIS], lastpos[Z_AXIS], lastpos[E_AXIS], feedrate/60, active_extruder); //final untretract
+			}
+			break;
+#endif //FILAMENTCHANGEENABLE
 		case 999: // Restart after being stopped
 			state= IDLE;
 			gcode_LastN = Stopped_gcode_LastN;
@@ -1723,12 +1903,11 @@ void process_commands()
 			break;
 		case 73:	// set progress
 			if (code_seen ('P'))		// ack, this comes in as an int...oh well....
-				{
-					float p = code_value();
-					if (p==0.0) job.Start(true);		// setting percent done to 0 will also reset the job start point
-					else job.SetPercent(p);
-
-				}
+			{
+				float p = code_value();
+				if (p==0.0) job.Start(true);		// setting percent done to 0 will also reset the job start point
+				else job.SetPercent(p);
+			}
 			break;
 
 		case 72: // play song
@@ -1746,9 +1925,35 @@ void process_commands()
 			SERIAL_ECHO(tmp_extruder);
 			SERIAL_ECHOLN(MSG_INVALID_EXTRUDER);
 		}
-		else
-		{
-			active_extruder = tmp_extruder;
+		else {
+			boolean make_move = false;
+			if(code_seen('F')) {
+				make_move = true;
+				next_feedrate = code_value();
+				if(next_feedrate > 0.0) {
+					feedrate = next_feedrate;
+				}
+			}
+#if EXTRUDERS > 1
+			if(tmp_extruder != active_extruder) {
+				// Save current position to return to after applying extruder offset
+				memcpy(destination, current_position, sizeof(destination));
+				// Offset extruder (only by XY)
+				int i;
+				for(i = 0; i < 2; i++) {
+					current_position[i] = current_position[i] -
+						extruder_offset[i][active_extruder] +
+						extruder_offset[i][tmp_extruder];
+				}
+				// Set the new active extruder and position
+				active_extruder = tmp_extruder;
+				plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
+				// Move to the old position if 'F' was in the parameters
+				if(make_move && Stopped == false) {
+					prepare_move();
+				}
+			}
+#endif
 			SERIAL_ECHO_START;
 			SERIAL_ECHO(MSG_ACTIVE_EXTRUDER);
 			SERIAL_PROTOCOLLN((int)active_extruder);
@@ -1812,8 +2017,8 @@ void get_coordinates()
 					state = EXTRUDE;
 				else
 					state = RETRACT;
-// 				progress_string[1] = (ftostr32a(destination[E_AXIS] - current_head_position[E_AXIS]));
-// 				progress_string[1] += "mm";
+				// 				progress_string[1] = (ftostr32a(destination[E_AXIS] - current_head_position[E_AXIS]));
+				// 				progress_string[1] += "mm";
 			}
 			else
 				state = PRINTING;
@@ -1987,6 +2192,26 @@ void controllerFan()
 }
 #endif
 
+#ifdef EXTRUDERFAN_PIN
+unsigned long lastExtruderCheck = 0;
+
+void extruderFan()
+{
+	if ((millis() - lastExtruderCheck) >= 2500) //Not a time critical function, so we only check every 2500ms
+	{
+		lastExtruderCheck = millis();
+
+		if (degHotend(active_extruder) < EXTRUDERFAN_DEC)
+		{
+			WRITE(EXTRUDERFAN_PIN, LOW); //... turn the fan off
+		}
+		else
+		{
+			WRITE(EXTRUDERFAN_PIN, HIGH); //... turn the fan on
+		}
+	}
+}
+#endif
 void DisableAllSteppers()
 {
 	disable_x();
@@ -2045,14 +2270,13 @@ void manage_inactivity()
 //-------------------------------------------------------------------------------------------------------------------
 void kill(int fatal)
 {
-//	if (state.isActiveState ()) job.Stop();
+	//	if (state.isActiveState ()) job.Stop();
 	SERIAL_ERROR_START;
 	if (fatal)
-		{
-			state = ERROR;
+	{
+		state = ERROR;
 		//	Error(MSG_ERR_KILLED);
-
-		}
+	}
 	else
 		state = SLEEPING;
 	disable_heater();
