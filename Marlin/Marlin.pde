@@ -1384,11 +1384,12 @@ void process_commands()
 			break;
 		case 117: // M117 display message
 		case 70:  // M70 display message (replicator)
-			starpos = (strchr(strchr_pointer + 5,'*'));
+			LCD_MESSAGEPRI(cmdbuffer[bufindr]+5, USER_MESSAGE_PRIORITY);
+	/*		starpos = (strchr(strchr_pointer + 5,'*'));
 			if(starpos!=NULL)
 				*(starpos-1)='\0';
 			//  lcd_setstatus(strchr_pointer + 5);
-			LCD_MESSAGEPRI(strchr_pointer+5, USER_MESSAGE_PRIORITY);
+			LCD_MESSAGEPRI(strchr_pointer+5, USER_MESSAGE_PRIORITY);*/
 			break;
 		case 114: // M114  report current position
 			SERIAL_PROTOCOLPGM("X:");
