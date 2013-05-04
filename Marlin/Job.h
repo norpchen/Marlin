@@ -41,7 +41,7 @@ public:
 	unsigned long JobTime() const { int rv = stoptime-starttime+pausedtime; if (rv >0) return rv; else return 1; };
 	unsigned long CalculateRemainingTime () ;
 	float Percent() const;
-	void SetPercent(float val) { percent = val; we_have_gcode_progress = true;}
+	void SetPercent(float val);
 	void SetSDPercent(float val) { sdpercentage = val; }
 	Job::JOBSTATE JobState() const { return jobstate; }
 	void SetJobState(Job::JOBSTATE val) { jobstate = val; }

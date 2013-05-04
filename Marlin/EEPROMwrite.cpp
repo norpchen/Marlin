@@ -172,20 +172,31 @@ void EEPROM_printHistory()
 	SERIAL_ECHOPGM("Extr 0 Time On: "); 
 	SERIAL_ECHOLN(EchoTimeSpan(total_extruder_time0)); 
 	SERIAL_ECHOPAIR("Extr 0 Degree-Hours: ",extruder0_degree_seconds/ 3600); 
-	SERIAL_ECHOPAIR(" (avg ",extruder0_degree_seconds/total_extruder_time0); 
-	SERIAL_ECHOLNPGM  (" degrees)" ); 
+	if (total_extruder_time0!=0)
+		{
+			SERIAL_ECHOPAIR(" (avg ",extruder0_degree_seconds/total_extruder_time0); 
+			SERIAL_ECHOLNPGM  (" degrees)" ); 
+		}
 #if EXTRUDERS > 1
 	SERIAL_ECHOLNPGM("Extruder 1 Time On: "); 
 	SERIAL_ECHOLN(EchoTimeSpan(total_extruder_time1)); 
 	SERIAL_ECHOPAIR("Extruder 1 Degree-Minutes: ",extruder1_degree_seconds/ 60); 
-	SERIAL_ECHOPAIR("  ( avg temp = ",extruder1_degree_seconds/total_extruder_time1); 
-	SERIAL_ECHOLN  ("  degrees) " ); #endif
+	if (total_extruder_time1!=0)
+	{
+		SERIAL_ECHOPAIR("  ( avg temp = ",extruder1_degree_seconds/total_extruder_time1); 
+		SERIAL_ECHOLN  ("  degrees) " ); #endif
+
+	}
 #endif
-		SERIAL_ECHOPGM("Bed Time On: "); 
+
+	SERIAL_ECHOPGM("Bed Time On: "); 
 	SERIAL_ECHOLN(EchoTimeSpan(total_bed_time)); 
 	SERIAL_ECHOPAIR("Bed Degree-Hours: ",bed_degree_seconds/ 3600); 
-	SERIAL_ECHOPAIR(" (avg ",bed_degree_seconds/total_bed_time); 
-	SERIAL_ECHOLNPGM  (" degrees) " ); 
+	if (total_bed_time!=0) 
+		{
+			SERIAL_ECHOPAIR(" (avg ",bed_degree_seconds/total_bed_time); 
+			SERIAL_ECHOLNPGM  (" degrees) " ); 
+	}
 
 
 	SERIAL_ECHOLN("Total Travel (meters)");
@@ -217,6 +228,7 @@ void ResetMetrics()
 	total_extruder_time0=0;
 	extruder1_degree_seconds=0;
 	extruder0_degree_seconds=0;
+	bed_degree_seconds=0;
 	total_filament=0;
 }
 

@@ -36,12 +36,12 @@ public:
   void setroot();
 
 
-  FORCE_INLINE bool isFileOpen() { return file.isOpen(); }
-  FORCE_INLINE bool eof() { return sdpos>=filesize ;};
-  FORCE_INLINE int16_t get() {  sdpos = file.curPosition();return (int16_t)file.read();};
-  FORCE_INLINE void setIndex(long index) {sdpos = index;file.seekSet(index);};
-  FORCE_INLINE float percentDone(){if(!isFileOpen()) return 0.0; if(filesize) return sdpos*100.0/(float)filesize; else return 0.0;};
-  FORCE_INLINE char* getWorkDirName(){workDir.getFilename(filename);return filename;};
+  bool isFileOpen();
+  bool eof();;
+  int16_t get();;
+  void setIndex(long index);;
+  float percentDone();;
+  char* getWorkDirName();;
 
 public:
   bool saving;

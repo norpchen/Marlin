@@ -39,6 +39,7 @@ void Job::Start( bool force/*=false*/ )
 	for (a=0;a<NUM_AXIS;a++)
 		job_distance[a]=total_distance[a];
 	last_time_estimate = 1;
+	pausedtime=0;
 	sdpercentage=percent = 0;
 	we_have_gcode_progress = false;
 	jobstate = RUNNING;
@@ -78,12 +79,13 @@ void Job::Stop(bool cancelled)
 
 unsigned long Job::CalculateRemainingTime()
 {
-	if (percent<0.1) return 0;
 	static float last_percent = -1;
-	if (last_percent == (percent+sdpercentage)/2 ) return last_time_estimate;
-	last_percent= (percent+sdpercentage)/2;
+	float t = max((percent+sdpercentage)/2,0.01);
+	if (t<0.25) return 0;
+	if (last_percent == t ) return last_time_estimate;
+	last_percent= t;
 	unsigned long total_time = JobTime() / ( last_percent / 100.0);
-	last_time_estimate = total_time - JobTime();
+	last_time_estimate = max (total_time - JobTime(),0);
 	return last_time_estimate;
 }
 
@@ -123,8 +125,11 @@ void Job::Update()
 	stoptime = millis() / 1000;
 	
 #ifdef SDSUPPORT
-	if (counter++ % 100 ==0 )
-		sdpercentage = card.percentDone();
+	if (counter++ >500)
+		{
+			sdpercentage = card.percentDone();
+			counter =0 ;
+		}
 #endif
 }
 
@@ -140,4 +145,12 @@ float Job::Percent() const
 float Job::GetDistanceTravelled( int axis ) const
 {
 	return total_distance[axis] - job_distance[axis];
+}
+
+void Job::SetPercent( float val )
+{
+	percent = val; 
+	we_have_gcode_progress = true; 
+	if (!card.sdprinting)
+			sdpercentage=percent ;
 }

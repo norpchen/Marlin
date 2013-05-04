@@ -91,10 +91,12 @@ void State::Update ()
 				break;
 			case 7:
 				progress_string[0]="EXT AVGTEMP";
+				if (total_extruder_time0==0)total_extruder_time0 = 0.01;
 				progress_string[2]=String(" ") +ftostr(extruder0_degree_seconds/total_extruder_time0,3,1)+String("\001  ");
 				break;
 			case 8:
 				progress_string[0]="BED AVGTEMP";
+				if (total_bed_time==0)total_bed_time = 0.01;
 				progress_string[2]=String(" ") +ftostr(bed_degree_seconds/total_bed_time,3,1)+String("\001  ");
 				break;
 			case 9:  progress_string[0]=String("  TIME ON  ");
@@ -173,7 +175,7 @@ void State::Update ()
 		{
 			if (refresh_lcd_messages)
 			{
-				LCD_MESSAGEPRI(String("MOVES: ") + String(itostr2(get_buffer_depth())) + String(" MEM:") + String(freeMemory()),DEFAULT_MESSAGE_PRIORITY-3);
+				LCD_MESSAGEPRI(String("MOVES: ") + String(itostr2(get_buffer_depth())) + String("  MEM:") + String(freeMemory()),DEFAULT_MESSAGE_PRIORITY-3);
 				last_block_refresh = now;
 			}
 		}
@@ -193,6 +195,8 @@ void State::Update ()
 			} 
 			else
 			{
+				if (current_state!=HEATING) SetLEDColor(((int) current_head_position[X_AXIS] * 100) & 0xff ,((int) current_head_position[Y_AXIS]*100) & 0xff,((int) current_head_position[E_AXIS]*1000) & 0xff, false);
+
 #ifdef SET_LED_COLOR_BY_ACTION
 				if (current_state!=HEATING) 
 					SetLEDColor(r,g,b,false);
@@ -248,8 +252,8 @@ void State::Update ()
 		{
 		case 0: progress_string[1] = String ("X:") + String(ftostr(job.GetDistanceTravelled(X_AXIS)/1000,3,2)+String("m")); break;
 		case 1: progress_string[1] = String ("Y:") + String(ftostr(job.GetDistanceTravelled(Y_AXIS)/1000,3,2)+String("m")); break;
-		case 2: progress_string[1] = String ("Z:") + String(ftostr(job.GetDistanceTravelled(Z_AXIS)/1000,3,2)+String("m")); break;
-		case 3: progress_string[1] = String ("E:") + String(ftostr(job.GetDistanceTravelled(E_AXIS)/1000,3,2) +String("m")); break;
+		case 2: progress_string[1] = String ("Z:") + String(ftostr(job.GetDistanceTravelled(Z_AXIS)/1000,2,3)+String("m")); break;
+		case 3: progress_string[1] = String ("E:") + String(ftostr(job.GetDistanceTravelled(E_AXIS)/1000,2,3) +String("m")); break;
 		}
 
 		// case roll thru
@@ -318,7 +322,11 @@ State & State::operator=( STATES newstate )
 #endif
 
 		break;
-
+	case HEATING :
+#ifdef BLINK_M
+		BlinkM_playScript(BLINK_M_ADDR,BLINK_M_HEATING_SCRIPT,0,0);
+#endif
+		break;
 	case WELCOME:
 #ifdef BLINK_M
 		BlinkM_playScript(BLINK_M_ADDR,BLINK_M_WELCOME_SCRIPT,0,0);
@@ -331,7 +339,7 @@ State & State::operator=( STATES newstate )
 		progress_string[0] = EchoTimeSpan (job.JobTime(),1);
 		progress_string[1] = "         ";//String ("Z:") + String(ftostr31(current_position[Z_AXIS]));
 
-		progress_string[2] = ftostr32a ((job.GetFilamentUsed())/1000) + String("m");
+		progress_string[2] = ftostr ((job.GetFilamentUsed())/1000,2,3) + String("m");
 
 		LCD_MESSAGEPGM ("JOB DONE");
 		LCD_STATUS;

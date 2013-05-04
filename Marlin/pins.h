@@ -1044,7 +1044,7 @@
 
 #ifdef NEWPANEL
 //arduino pin which triggers an piezzo beeper
-#define BEEPER AVAILABLE_PIN_C2			// Beeper on AUX-4
+#define BEEPER AVAILABLE_PIN_C0			// Beeper on AUX-4
 
 #ifndef MCP28017_LCD
 #define LCD_PINS_RS 16

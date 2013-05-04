@@ -4,7 +4,7 @@
 
 
 //return for string conversion routines
-static char conv[8];
+static char conv[10];
 
 //**********************************************************************************************************
 //  convert float to string with 123 format
@@ -42,13 +42,13 @@ char *ftostr(float x,int pre,int post, bool sign)
 		100000,
 		1000000
 	};
-	int xx=x*powers[post];
+	long xx=x*powers[post];
 	int pos =0 ;
 	if (sign)
 	{
 		conv[pos++]=(xx>=0)?'+':'-';
-		xx=abs(xx);
 	}
+	xx=abs(xx);
 	for (;pre >0;pre--)
 		conv[pos++]=(xx / powers[pre+post-1]) % 10+'0';
 	if (post>0)
@@ -158,6 +158,17 @@ char *itostr4(const int &xx)
 	conv[2]=(xx/10)%10+'0';
 	conv[3]=(xx)%10+'0';
 	conv[4]=0;
+	return conv;
+}
+
+char *itostr5(const int &xx)
+{
+	conv[0]=(xx/10000)%10+'0';
+	conv[1]=(xx/1000)%10+'0';
+	conv[2]=(xx/100)%10+'0';
+	conv[3]=(xx/10)%10+'0';
+	conv[4]=(xx)%10+'0';
+	conv[5]=0;
 	return conv;
 }
 

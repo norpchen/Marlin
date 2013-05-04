@@ -301,7 +301,7 @@ void CardReader::openFile(char* name,bool read)
 			saving = true;
 			SERIAL_PROTOCOLPGM(MSG_SD_WRITE_TO_FILE);
 			SERIAL_PROTOCOLLN(name);
-			LCD_MESSAGEPRI(String ("Save ")  + String(name),30999);
+			LCD_MESSAGEPRI(String ("Save ")  + String(name),3000);
 		}
 	}
 }
@@ -361,7 +361,7 @@ void CardReader::removeFile(char* name)
 	if (file.remove(curDir, fname))
 	{
 		SERIAL_PROTOCOLPGM("File deleted:");
-		SERIAL_PROTOCOL(fname);
+		SERIAL_PROTOCOLLN(fname);
 		sdpos = 0;
 	}
 	else
@@ -543,5 +543,40 @@ void CardReader::printingHasFinished()
 	}
 	autotempShutdown();
 	job.Stop();
+}
+
+char* CardReader::getWorkDirName()
+{
+	workDir.getFilename(filename);return filename;
+}
+
+float CardReader::percentDone()
+{
+	if(!isFileOpen()) 
+		return 0.0; 
+	if(filesize > 0) 
+		return sdpos*100.0/(float)filesize; 
+	else 
+		return 0.0;
+}
+
+int16_t CardReader::get()
+{
+	sdpos = file.curPosition();return (int16_t)file.read();
+}
+
+bool CardReader::eof()
+{
+	return sdpos>=filesize ;
+}
+
+bool CardReader::isFileOpen()
+{
+	return file.isOpen();
+}
+
+void CardReader::setIndex( long index )
+{
+	sdpos = index;file.seekSet(index);
 }
 #endif //SDSUPPORT

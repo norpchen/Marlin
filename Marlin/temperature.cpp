@@ -38,7 +38,6 @@ http://reprap.org/pipermail/reprap-dev/2011-May/003323.html
 //===========================================================================
 int target_raw[EXTRUDERS] = { 0 };
 int target_raw_bed = 0;
-int overheat_allowance = OVERHEAT_ALLOWANCE;
 
 #ifdef BED_LIMIT_SWITCHING
 int target_bed_low_temp =0;
@@ -1127,7 +1126,7 @@ ISR(TIMER0_COMPB_vect)
 
 		for(unsigned char e = 0; e < EXTRUDERS; e++)
 		{
-			if(current_raw[e] >= maxttemp[e] + overheat_allowance)
+			if(current_raw[e] >= maxttemp[e] + OVERHEAT_ALLOWANCE)
 			{
 				target_raw[e] = 0;
 				max_temp_error(e);
@@ -1150,7 +1149,7 @@ ISR(TIMER0_COMPB_vect)
 		}
 
 #if defined(BED_MAXTEMP) && (HEATER_BED_PIN > -1)
-		if(current_raw_bed >= bed_maxttemp + overheat_allowance)
+		if(current_raw_bed >= bed_maxttemp + OVERHEAT_ALLOWANCE)
 		{
 			target_raw_bed = 0;
 			bed_max_temp_error();

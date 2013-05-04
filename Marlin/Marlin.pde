@@ -414,7 +414,9 @@ void loop()
 			{
 				card.closefile();
 				SERIAL_PROTOCOLLNPGM(MSG_FILE_SAVED);
+				LCD_MESSAGE_CLEAR;
 				job.Stop();
+				state = DEBUG;
 				state = IDLE;
 				LCD_MESSAGEPGMPRI ("Upload completed", USER_MESSAGE_PRIORITY);
 			}
@@ -1012,7 +1014,7 @@ void process_commands()
 		case 24: //M24 - Start SD print
 			state = PRINTING;
 			state.SetController ( SDCARD);
-			job.Start();
+			job.Start(true);
 			card.startFileprint();
 			break;
 		case 25: //M25 - Pause SD print
@@ -1031,7 +1033,7 @@ void process_commands()
 			break;
 		case 28: //M28 - Start SD write
 			state = SAVING;
-			job.Start();
+			job.Start(true);
 
 			starpos = (strchr(strchr_pointer + 4,'*'));
 			if(starpos != NULL)
@@ -1152,7 +1154,7 @@ void process_commands()
 			break;
 		case 109:
 			{
-				job.Start();				//					echo = true;
+				job.Start(true);				//					echo = true;
 				state = HEATING;
 				// M109 - Wait for extruder heater to reach target.
 				if(setTargetedHotend(109))
@@ -1230,7 +1232,7 @@ void process_commands()
 #endif //TEMP_RESIDENCY_TIME
 				}
 				LCD_MESSAGEPGMPRI(MSG_HEATING_COMPLETE, DEFAULT_MESSAGE_PRIORITY+1);
-				job.Start();
+				job.Start(true);
 				SERIAL_ECHO_START;
 				SERIAL_ECHOLNPGM("Heating done, let's go! ");
 				previous_millis_cmd = millis();
@@ -1238,7 +1240,7 @@ void process_commands()
 			break;
 		case 190: // M190 - Wait for bed heater to reach target.
 #if TEMP_BED_PIN > -1
-			job.Start();
+			job.Start(true);
 
 			state = HEATING;
 			progress_string[2] = String ("   BED   ") ;
@@ -1382,14 +1384,15 @@ void process_commands()
 			LCD_MESSAGEPGM("USB host connected");
 			if (state==WELCOME) state = IDLE;
 			break;
-		case 117: // M117 display message
 		case 70:  // M70 display message (replicator)
-			LCD_MESSAGEPRI(cmdbuffer[bufindr]+5, USER_MESSAGE_PRIORITY);
-	/*		starpos = (strchr(strchr_pointer + 5,'*'));
+		case 117: // M117 display message
+			starpos = (strchr(strchr_pointer + 4,'*'));
 			if(starpos!=NULL)
 				*(starpos-1)='\0';
-			//  lcd_setstatus(strchr_pointer + 5);
-			LCD_MESSAGEPRI(strchr_pointer+5, USER_MESSAGE_PRIORITY);*/
+			if (strchr_pointer[0]==0) 
+				LCD_MESSAGE_CLEAR;
+			else
+				LCD_MESSAGEPRI(strchr_pointer, USER_MESSAGE_PRIORITY);
 			break;
 		case 114: // M114  report current position
 			SERIAL_PROTOCOLPGM("X:");
@@ -1911,8 +1914,8 @@ void process_commands()
 			}
 			break;
 
-		case 72: // play song
-			break;
+			// 		case 72: // play song
+			// 			break;
 		}
 	}
 
@@ -1926,12 +1929,15 @@ void process_commands()
 			SERIAL_ECHO(tmp_extruder);
 			SERIAL_ECHOLN(MSG_INVALID_EXTRUDER);
 		}
-		else {
+		else 
+		{
 			boolean make_move = false;
-			if(code_seen('F')) {
+			if(code_seen('F')) 
+			{
 				make_move = true;
 				next_feedrate = code_value();
-				if(next_feedrate > 0.0) {
+				if(next_feedrate > 0.0) 
+				{
 					feedrate = next_feedrate;
 				}
 			}

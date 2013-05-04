@@ -19,8 +19,10 @@ char *itostr31(const int &xx);
 char *itostr3(const int &xx);
 char *itostr4(const int &xx);
 char *ftostr51(const float &x);
+char *ftostr52(const float &x);
 char *ftostr32a(const float &x);
 char *ftostr(float x,int pre,int post, bool sign=false);
+char *itostr5(const int &xx);
 
 void SetLEDColor (int r, int g, int b, bool fade=true);
 unsigned long CalculateRemainingTime (float percent_complete,unsigned long elapsed_time);

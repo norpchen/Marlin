@@ -346,7 +346,7 @@ const bool Z_ENDSTOPS_INVERTING = false; // set to true to invert the logic of t
 #define LCD_HEIGHT 4
 
 // Preheat Constants
-#define PLA_PREHEAT_HOTEND_TEMP 190
+#define PLA_PREHEAT_HOTEND_TEMP 200
 #define PLA_PREHEAT_HPB_TEMP 70
 #define PLA_PREHEAT_FAN_SPEED 190		// Insert Value between 0 and 255
 
