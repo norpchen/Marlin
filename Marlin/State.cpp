@@ -48,6 +48,7 @@ void State::Update ()
 		// ------------------------------------------------------------------------------------------------------------------------------------------------------------
 	case SLEEPING:
 	case IDLE :
+		progress_string[1] = "Last Cmd";
 		progress_string[2] = EchoTimeSpan((now - time_of_last_command)/1000,true);
 		break;
 
@@ -91,12 +92,12 @@ void State::Update ()
 				break;
 			case 7:
 				progress_string[0]="EXT AVGTEMP";
-				if (total_extruder_time0==0)total_extruder_time0 = 0.01;
+				if (total_extruder_time0<1)total_extruder_time0 = 1;
 				progress_string[2]=String(" ") +ftostr(extruder0_degree_seconds/total_extruder_time0,3,1)+String("\001  ");
 				break;
 			case 8:
 				progress_string[0]="BED AVGTEMP";
-				if (total_bed_time==0)total_bed_time = 0.01;
+				if (total_bed_time<1)total_bed_time = 1;
 				progress_string[2]=String(" ") +ftostr(bed_degree_seconds/total_bed_time,3,1)+String("\001  ");
 				break;
 			case 9:  progress_string[0]=String("  TIME ON  ");
@@ -104,6 +105,17 @@ void State::Update ()
 				progress_string[2]=EchoTimeSpan(now / 1000,true);
 				break;
 			}
+			if ((now & 0x3f) ==0) 
+		//	if (refresh_lcd_messages)
+			{
+				int v = 32+(now & 0x0f)<<2;
+
+			     int r = random(v);
+			     int g = random(v);
+			     int  b = max(v - r - g,0);
+				SetLEDColor(r,g,b, false);
+			}
+
 		}
 		break;
 
@@ -133,14 +145,14 @@ void State::Update ()
 				switch (phase)
 				{
 				case 0:
-					progress_string[1] = String("SPD:");
+					progress_string[1] = String("FEED:");
 					progress_string[1]+=String (feedmultiply);
-					progress_string[1]+=" %  ";
+					progress_string[1]+="%  ";
 					break;
 				case 1:
-					progress_string[1] = String("FLO:");
+					progress_string[1] = String("FLOW:");
 					progress_string[1]+=String (extrudemultiply);
-					progress_string[1]+=" %  ";
+					progress_string[1]+="%  ";
 					break;
 				case 2:
 					progress_string[1] = String(ftostr((current_head_position[2]/(job.JobTime())*3600),3,1)+String("mm/h"));
@@ -175,7 +187,7 @@ void State::Update ()
 		{
 			if (refresh_lcd_messages)
 			{
-				LCD_MESSAGEPRI(String("MOVES: ") + String(itostr2(get_buffer_depth())) + String("  MEM:") + String(freeMemory()),DEFAULT_MESSAGE_PRIORITY-3);
+				LCD_MESSAGEPRI(String("MOVES: ") + String(itostr2(get_buffer_depth())) + String(" ") + String(ftostr(job.Speed(),3,2))+String("mm/s"),DEFAULT_MESSAGE_PRIORITY);
 				last_block_refresh = now;
 			}
 		}
@@ -195,7 +207,7 @@ void State::Update ()
 			} 
 			else
 			{
-				if (current_state!=HEATING) SetLEDColor(((int) current_head_position[X_AXIS] * 100) & 0xff ,((int) current_head_position[Y_AXIS]*100) & 0xff,((int) current_head_position[E_AXIS]*1000) & 0xff, false);
+			//	if (current_state!=HEATING) SetLEDColor(((int) current_head_position[X_AXIS] * 100) & 0xff ,((int) current_head_position[Y_AXIS]*100) & 0xff,((int) current_head_position[E_AXIS]*1000) & 0xff, false);
 
 #ifdef SET_LED_COLOR_BY_ACTION
 				if (current_state!=HEATING) 
@@ -295,7 +307,7 @@ State & State::operator=( STATES newstate )
 
 	case ERROR:
 		job.Stop(true);
-		Error ("Printer halted. kill() called !!");
+		Error ("Printer halted. KILLED!!");
 #ifdef BLINK_M
 		BlinkM_playScript(BLINK_M_ADDR,BLINK_M_ERROR_SCRIPT,0,0);
 #else
@@ -306,7 +318,7 @@ State & State::operator=( STATES newstate )
 		// -------------------------------------------------------------------------------------------------------------------------
 
 	case SLEEPING:
-		SERIAL_ERRORLNPGM("Printer idle, going to sleep");
+		SERIAL_ERRORLNPGM("Printer going to sleep");
 		LCD_MESSAGEPGM("...sleeping... ");
 #ifdef BLINK_M
 		BlinkM_playScript(BLINK_M_ADDR,BLINK_M_SLEEP_SCRIPT,0,0);
@@ -329,7 +341,7 @@ State & State::operator=( STATES newstate )
 		break;
 	case WELCOME:
 #ifdef BLINK_M
-		BlinkM_playScript(BLINK_M_ADDR,BLINK_M_WELCOME_SCRIPT,0,0);
+	//	BlinkM_playScript(BLINK_M_ADDR,BLINK_M_WELCOME_SCRIPT,0,0);
 #endif
 		break;
 
@@ -344,9 +356,9 @@ State & State::operator=( STATES newstate )
 		LCD_MESSAGEPGM ("JOB DONE");
 		LCD_STATUS;
 		SERIAL_ECHO_START
-		SERIAL_PROTOCOLPGM("// DONE!  PRINT TIME WAS : " );
+		SERIAL_PROTOCOLPGM("Done, print time: " );
 		SERIAL_PROTOCOLLN(progress_string[0]);
-		SERIAL_PROTOCOLPGM("//Filament used: ");
+		SERIAL_PROTOCOLPGM("Filament used: ");
 		SERIAL_PROTOCOLLN(progress_string[2]);
 		progress_string[2] = String ("F:") +progress_string[2];
 #ifdef BLINK_M

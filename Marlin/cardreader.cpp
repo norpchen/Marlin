@@ -16,7 +16,7 @@ CardReader::CardReader()
 	saving = false;
 	logging = false;
 	autostart_atmillis=0;
-
+	volsize=0;
 	autostart_stilltocheck=true; //the sd start is delayed, because otherwise the serial cannot answer fast enough to make contact with the hostsoftware.
 	lastnr=0;
 	//power to SD reader
@@ -143,7 +143,7 @@ void CardReader::initsd()
 	cardOK = false;
 	if(root.isOpen())
 		root.close();
-	if (!card.init(SPI_FULL_SPEED,SDSS))
+	if (!card.init(SPI_SPEED,SDSS))
 	{
 		//if (!card.init(SPI_HALF_SPEED,SDSS))
 		SERIAL_ECHO_START;
@@ -167,6 +167,7 @@ void CardReader::initsd()
 	}
 	workDir=root;
 	curDir=&root;
+	volsize = card.cardSize() * 512;
 	/*
 	if(!workDir.openRoot(&volume))
 	{

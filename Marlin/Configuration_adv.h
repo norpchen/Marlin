@@ -184,12 +184,12 @@
 // The hardware watchdog should halt the Microcontroller, in case the firmware gets stuck somewhere. However:
 // the Watchdog is not working well, so please only enable this for testing
 // this enables the watchdog interrupt.
-//#define USE_WATCHDOG
-//#ifdef USE_WATCHDOG
+#define USE_WATCHDOG
+#ifdef USE_WATCHDOG
   // you cannot reboot on a mega2560 due to a bug in he bootloader. Hence, you have to reset manually, and this is done hereby:
 //#define RESET_MANUAL
-//#define WATCHDOG_TIMEOUT 4  //seconds
-//#endif
+#define WATCHDOG_TIMEOUT 10  //seconds
+#endif
 
 // extruder advance constant (s2/mm3)
 //

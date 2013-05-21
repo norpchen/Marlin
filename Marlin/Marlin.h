@@ -224,7 +224,7 @@ extern float total_filament;
 void manage_other_tasks();
 void DisableAllSteppers();
 
-extern unsigned long last_time_estimate;
+
 extern unsigned long now;			// cached value of millis() -- should be reasonably recent
 
 extern volatile int feedmultiply; //100->1 200->2

@@ -12,6 +12,8 @@
 #define STRING_VERSION_CONFIG_H __DATE__  // "2013-04-22" //Personal revision number for changes to THIS file.
 #define STRING_CONFIG_H_AUTHOR "lars"  ///Who made the changes.
 
+
+
 // This determines the communication speed of the printer
 #define BAUDRATE (250000*2)
 //#define BAUDRATE 115200
@@ -36,9 +38,6 @@
 // report file size with the name when listing the SD Card contents
 #define SHOWFILEBYTES true
 
-// when requesting an SD card status update from the host (M27) -- should it include % done and time estimate?
-#define SHOW_SD_PROGRESS_PERCENT true
-
 
 
 #define MOTHERBOARD 81
@@ -49,7 +48,18 @@
 
 #endif
 
-
+#ifdef SDSUPPORT
+// when requesting an SD card status update from the host (M27) -- should it include % done and time estimate?
+#define SHOW_SD_PROGRESS_PERCENT true
+#define SPI_SPEED SPI_EIGHTH_SPEED 
+// SPI_HALF_SPEED
+// SPI_FULL_SPEED = 0;
+// SPI_HALF_SPEED = 1;
+// SPI_QUARTER_SPEED = 2;
+// SPI_EIGHTH_SPEED = 3;
+// SPI_SIXTEENTH_SPEED = 4;
+//------------------------------------------------------------------------------
+#endif
 
 
 // save metrics like total print time to eeprom to track lifetime usage:  this will cause more writes to the flash EEPROM

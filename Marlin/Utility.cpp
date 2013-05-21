@@ -296,7 +296,7 @@ char* EchoTimeSpan (long t, bool shortform)
 //-------------------------------------------------------------------------------------------------------------------
 // uses I2C RGB LED since we have only one PWM pin available
 // like the BlinkM
-void SetLEDColor (int r, int g, int b, bool fade)
+void SetLEDColor (byte r, byte g, byte b, bool fade)
 {
 
 #ifdef BLINK_M

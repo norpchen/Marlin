@@ -283,6 +283,9 @@ void PID_autotune(float temp, int extruder, int ncycles)
 		}
 		if(millis() - temp_millis > 2000)
 		{
+#ifdef USE_WATCHDOG
+			watchdog_reset();
+#endif
 			int p;
 			if (extruder<0)
 			{
@@ -346,7 +349,7 @@ int getHeaterPower(int heater)
 void manage_heater()
 {
 #ifdef USE_WATCHDOG
-	wd_reset();
+	watchdog_reset();
 #endif
 
 	float pid_input;

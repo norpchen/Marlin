@@ -380,7 +380,7 @@ void setup()
 	tp_init();    // Initialize temperature loop
 	plan_init();  // Initialize planner;
 	st_init();    // Initialize stepper;
-	wd_init();
+	watchdog_init();
 	job.init();
 
 	setup_photpin();
@@ -502,6 +502,7 @@ void get_command()
 					}
 
 					gcode_LastN = gcode_N;
+					if (gcode_N<=1) job.Start(true);
 					//if no errors, continue parsing
 				}
 				else  // if we don't receive 'N' but still see '*'
@@ -949,8 +950,9 @@ void process_commands()
 		case 1: // M1 - Conditional stop - Wait for user button press on LCD
 		case 226:
 			{
+				STATES prev_state = state;
 				state = PAUSED;
-				LCD_MESSAGEPGM(MSG_USERWAIT);
+			
 				codenum = 0;
 				if(code_seen('P')) codenum = code_value(); // milliseconds to wait
 				if(code_seen('S')) codenum = code_value() * 1000; // seconds to wait
@@ -962,7 +964,8 @@ void process_commands()
 					codenum +=now;  // keep track of when we started waiting
 					while(now  < codenum && !CLICKED)
 					{
-						progress_string[0] = EchoTimeSpan ((now - codenum)/1000, true);
+						LCD_MESSAGEPGM("Click, or will resume in ");
+						progress_string[0] = EchoTimeSpan ((codenum - now )/1000, true);
 						progress_string[1] = String("M") + String(cv,DEC);
 						manage_other_tasks();
 					}
@@ -971,11 +974,13 @@ void process_commands()
 				{
 					while(!CLICKED)
 					{
+						LCD_MESSAGEPGM(MSG_USERWAIT);
 						progress_string[0] = EchoTimeSpan ((now - previous_millis_cmd)/1000, true);
 						progress_string[1] = "M" + String(cv,DEC);
 						manage_other_tasks();
 					}
 				}
+				state = prev_state;
 			}
 			break;
 #endif
@@ -999,6 +1004,10 @@ void process_commands()
 		case 21: // M21 - init SD card
 
 			card.initsd();
+			SERIAL_ECHO_START;
+			SERIAL_PROTOCOLPGM ("Volume size: ");
+			SERIAL_PROTOCOLLN (card.Volsize());
+			
 
 			break;
 		case 22: //M22 - release SD card
@@ -1881,6 +1890,7 @@ void process_commands()
 			job.Stop();
 			LCD_MESSAGE_CLEAR;
 			FlushSerialRequestResend();
+			LCD_MESSAGEPGM("RESET");
 			break;
 
 			// extensions start here:
@@ -2412,6 +2422,8 @@ bool setTargetedHotend(int code)
 }
 
 //-------------------------------------------------------------------------------------------------------------------
+extern unsigned long I2C_timeouts;
+unsigned long last_update = millis();
 
 void manage_other_tasks()
 {
@@ -2420,7 +2432,26 @@ void manage_other_tasks()
 	manage_inactivity();
 	state.Update();
 	LCD_STATUS;
-	int dt = (now - last_clock_update);
+	unsigned long dt = now - last_update ;
+	if (dt > 500) 
+	{
+		SERIAL_ECHO_START;
+		SERIAL_ECHOPAIR ("Time:" , (unsigned long) (dt));
+		SERIAL_ECHOLNPGM ("Excess time between updates!");
+	}
+
+	if (I2C_timeouts > 0 ) 
+	{
+		SERIAL_ECHO_START;
+		SERIAL_ECHOPAIR ("Errors:" , I2C_timeouts);
+		SERIAL_ECHOLNPGM ("I2C errors");
+		I2C_timeouts=0;
+	}
+
+
+	last_update = now;
+
+	dt = (now - last_clock_update);
 
 	if (dt > 1000)
 	{
@@ -2430,12 +2461,12 @@ void manage_other_tasks()
 		if (degTargetBed() > 10)
 		{
 			total_bed_time+=dt;
-			bed_degree_seconds += degTargetBed() * dt;
+			bed_degree_seconds += degBed() * dt;
 		}
 		if (degTargetHotend0() > 0)
 		{
 			total_extruder_time0+=dt;
-			extruder0_degree_seconds += degTargetHotend0() * dt;
+			extruder0_degree_seconds += degHotend0() * dt;
 		}
 #if EXTRUDERS>1
 		if (degTargetHotend1() > 0)

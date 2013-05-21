@@ -1,6 +1,8 @@
 #ifndef ULTRALCD_H
 #define ULTRALCD_H
 #include "Marlin.h"
+#include "Utility.h"
+
 
 #define LCD_UPDATE_INTERVAL 350
 
@@ -13,190 +15,165 @@
 
 #ifdef ULTRA_LCD
 #ifndef MCP23017_LCD
-	#ifdef PCF8574T_LCD
-		#include <LiquidCrystal_I2C.h>
-	#else
-		#include <LiquidCrystal.h>
-	#endif
-#endif
-  void lcd_status();
-  void lcd_init();
-  void lcd_status(const char* message, int priority=DEFAULT_MESSAGE_PRIORITY);
-  void lcd_status(const String message, int priority=DEFAULT_MESSAGE_PRIORITY);
-  void lcd_clear_message(int priority=-1);
-  void beep();
-  void beepshort();
-  void buttons_init();
-  void buttons_check();
-
-  #define STATUSTIMEOUT 15000
-  
-#ifdef MCP23017_LCD
-  extern LiquidTWI2 lcd;
+#ifdef PCF8574T_LCD
+#include <LiquidCrystal_I2C.h>
 #else
-	#ifdef PCF8574T_LCD
-		 extern LiquidCrystal_I2C lcd;
-	#else
-		 extern LiquidCrystal lcd;
-	#endif
- 
+#include <LiquidCrystal.h>
+#endif
+#endif
+void lcd_status();
+void lcd_init();
+void lcd_status(const char* message, int priority=DEFAULT_MESSAGE_PRIORITY);
+void lcd_status(const String message, int priority=DEFAULT_MESSAGE_PRIORITY);
+void lcd_clear_message(int priority=-1);
+void beep();
+void beepshort();
+void buttons_init();
+void buttons_check();
+
+#define STATUSTIMEOUT 15000
+
+#ifdef MCP23017_LCD
+extern LiquidTWI2 lcd;
+#else
+#ifdef PCF8574T_LCD
+extern LiquidCrystal_I2C lcd;
+#else
+extern LiquidCrystal lcd;
 #endif
 
-  extern volatile char buttons;  //the last checked buttons in a bit array.
-  
-  #ifdef NEWPANEL
-    #define EN_C (1<<BLEN_C)
-    #define EN_B (1<<BLEN_B)
-    #define EN_A (1<<BLEN_A)
-    
-    #define CLICKED (buttons&EN_C)
-    #define BLOCK {blocking=millis()+blocktime;}
-    #if (SDCARDDETECT > -1)
-      #ifdef SDCARDDETECTINVERTED 
-        #define CARDINSERTED (READ(SDCARDDETECT)!=0)
-      #else
-        #define CARDINSERTED (READ(SDCARDDETECT)==0)
-      #endif
-    #endif  //SDCARDTETECTINVERTED
+#endif
 
-  #else
+extern volatile char buttons;  //the last checked buttons in a bit array.
 
-    //atomatic, do not change
-    #define B_LE (1<<BL_LE)
-    #define B_UP (1<<BL_UP)
-    #define B_MI (1<<BL_MI)
-    #define B_DW (1<<BL_DW)
-    #define B_RI (1<<BL_RI)
-    #define B_ST (1<<BL_ST)
-    #define EN_B (1<<BLEN_B)
-    #define EN_A (1<<BLEN_A)
-    
-    #define CLICKED ((buttons&B_MI)||(buttons&B_ST))
-    #define BLOCK {blocking[BL_MI]=millis()+blocktime;blocking[BL_ST]=millis()+blocktime;}
-    
-  #endif
-    
+#ifdef NEWPANEL
+#define EN_C (1<<BLEN_C)
+#define EN_B (1<<BLEN_B)
+#define EN_A (1<<BLEN_A)
 
-    
-  // blocking time for recognizing a new keypress of one key, ms
-  #define blocktime 500
-  #define lcdslow 5
-    
-  enum MainStatus{Main_Status, Main_Menu, Main_Prepare,Sub_PrepareMove, Main_Control, Main_SD,Sub_TempControl,Sub_MotionControl,Sub_RetractControl, Sub_PreheatPLASettings, Sub_PreheatABSSettings};
+#define CLICKED (buttons&EN_C)
+#define BLOCK {blocking=millis()+blocktime;}
+#if (SDCARDDETECT > -1)
+#ifdef SDCARDDETECTINVERTED
+#define CARDINSERTED (READ(SDCARDDETECT)!=0)
+#else
+#define CARDINSERTED (READ(SDCARDDETECT)==0)
+#endif
+#endif  //SDCARDTETECTINVERTED
 
-  class MainMenu{
-  public:
-    MainMenu();
-    void update();
-    int8_t activeline;
-    MainStatus status;
-    uint8_t displayStartingRow;
-    
+#else
+
+//atomatic, do not change
+#define B_LE (1<<BL_LE)
+#define B_UP (1<<BL_UP)
+#define B_MI (1<<BL_MI)
+#define B_DW (1<<BL_DW)
+#define B_RI (1<<BL_RI)
+#define B_ST (1<<BL_ST)
+#define EN_B (1<<BLEN_B)
+#define EN_A (1<<BLEN_A)
+
+#define CLICKED ((buttons&B_MI)||(buttons&B_ST))
+#define BLOCK {blocking[BL_MI]=millis()+blocktime;blocking[BL_ST]=millis()+blocktime;}
+
+#endif
+
+// blocking time for recognizing a new keypress of one key, ms
+#define blocktime 500
+#define lcdslow 5
+
+enum MainStatus
+{
+	Main_Status,
+	Main_Menu, 
+	Main_Prepare,
+	Sub_PrepareMove, 
+	Main_Control, 
+	Main_SD,
+	Sub_TempControl,
+	Sub_MotionControl,
+	Sub_RetractControl, 
+	Sub_PreheatPLASettings, 
+	Sub_PreheatABSSettings
+};
+
+class MainMenu
+{
+public:
+	MainMenu();
+	void update();
+	int8_t activeline;
+	MainStatus status;
+	uint8_t displayStartingRow;
+
 	void displayTemps();
-    void showStatus();
-    void showMainMenu();
-    void showPrepare();
-    void showTune();
-    void showControl();
-    void showControlMotion();
-    void showControlTemp();
-    void showControlRetract();
-    void showAxisMove();
-    void showSD();
+	void showStatus();
+	void showMainMenu();
+	void showPrepare();
+	void showTune();
+	void showControl();
+	void showControlMotion();
+
+	void HandleAdjustment ( uint8_t line, const char * str, float & t , int min=1, int max=990,int a=4, int b =1 );
+	//float HandleAdjustment ( uint8_t line, const char * str, long & t , int min=1, int max=990);
+
+	void updateFloatDisplay( int line, float value , int a=4, int b =1);
+
+
+	void showControlTemp();
+	void showControlRetract();
+	void showAxisMove();
+	void showSD();
 	void showPLAsettings();
 	void showABSsettings();
-    bool force_lcd_update;
-    long lastencoderpos;
-    int8_t lineoffset;
-    int8_t lastlineoffset;
-    
-    bool linechanging;
-    
-    bool tune;
-    
-  private:
-    FORCE_INLINE void updateActiveLines(const uint8_t &maxlines,volatile long &encoderpos)
-    {
-      if(linechanging) return; // an item is changint its value, do not switch lines hence
-      lastlineoffset=lineoffset; 
-      long curencoderpos=encoderpos;  
-      force_lcd_update=false;
-      if(  (abs(curencoderpos-lastencoderpos)<lcdslow) ) 
-      { 
-        lcd.setCursor(0,activeline);lcd.print((activeline+lineoffset)?' ':' '); 
-        if(curencoderpos<0)  
-        {  
-          lineoffset--; 
-          if(lineoffset<0) lineoffset=0; 
-          curencoderpos=lcdslow-1;
-        } 
-        if(curencoderpos>(LCD_HEIGHT-1+1)*lcdslow) 
-        { 
-          lineoffset++; 
-          curencoderpos=(LCD_HEIGHT-1)*lcdslow; 
-          if(lineoffset>(maxlines+1-LCD_HEIGHT)) 
-            lineoffset=maxlines+1-LCD_HEIGHT; 
-          if(curencoderpos>maxlines*lcdslow) 
-            curencoderpos=maxlines*lcdslow; 
-        } 
-        lastencoderpos=encoderpos=curencoderpos;
-        activeline=curencoderpos/lcdslow;
-        if(activeline<0) activeline=0;
-        if(activeline>LCD_HEIGHT-1) activeline=LCD_HEIGHT-1;
-        if(activeline>maxlines) 
-        {
-          activeline=maxlines;
-          curencoderpos=maxlines*lcdslow;
-        }
-        if(lastlineoffset!=lineoffset)
-          force_lcd_update=true;
-        lcd.setCursor(0,activeline);lcd.print((activeline+lineoffset)?'>':'\003');    
-      } 
-    }
-    
-    FORCE_INLINE void clearIfNecessary()
-    {
-      if(lastlineoffset!=lineoffset ||force_lcd_update)
-      {
-        force_lcd_update=true;
-         lcd.clear();
-      } 
-    }
-  };
+	bool force_lcd_update;
+	long lastencoderpos;
+	int8_t lineoffset;
+	int8_t lastlineoffset;
 
-  //conversion routines, could need some overworking
-  char *ftostr51(const float &x);
-  char *ftostr52(const float &x);
-  char *ftostr31(const float &x);
-  char *ftostr3(const float &x);
+	bool linechanging;
 
+	bool tune;
 
-  #define LCD_INIT lcd_init();
-  #define LCD_MESSAGE(x) lcd_status(x);
-  #define LCD_MESSAGEPRI(x,y) lcd_status(x,y);
-  #define LCD_MESSAGEPGMPRI(x,y) lcd_statuspgm(MYPGM(x),y);
-  #define LCD_MESSAGEPGM(x) lcd_statuspgm(MYPGM(x));
-  #define LCD_ALERTMESSAGEPGM(x) lcd_alertstatuspgm(MYPGM(x),-1);
-  #define LCD_STATUS lcd_status()
-  #define LCD_MESSAGE_CLEAR lcd_clear_message()
-  #define LCD_MESSAGE_CLEARPRI(x) lcd_clear_message(x);
+private:
+	void updateActiveLines(const uint8_t &maxlines,volatile long &encoderpos);
+
+	void clearIfNecessary();
+	void updateIntDisplay( int line, int value );
+};
+
+/*
+//conversion routines, could need some overworking
+char *ftostr51(const float &x);
+char *ftostr52(const float &x);
+char *ftostr31(const float &x);
+char *ftostr3(const float &x);*/
+
+#define LCD_INIT lcd_init();
+#define LCD_MESSAGE(x) lcd_status(x);
+#define LCD_MESSAGEPRI(x,y) lcd_status(x,y);
+#define LCD_MESSAGEPGMPRI(x,y) lcd_statuspgm(MYPGM(x),y);
+#define LCD_MESSAGEPGM(x) lcd_statuspgm(MYPGM(x));
+#define LCD_ALERTMESSAGEPGM(x) lcd_alertstatuspgm(MYPGM(x),-1);
+#define LCD_STATUS lcd_status()
+#define LCD_MESSAGE_CLEAR lcd_clear_message()
+#define LCD_MESSAGE_CLEARPRI(x) lcd_clear_message(x);
 #else //no lcd
-  #define LCD_INIT
-  #define LCD_STATUS
-  #define LCD_MESSAGE(x)
-  #define LCD_MESSAGEPGM(x)
-  #define LCD_ALERTMESSAGEPGM(x)
-  #define LCD_MESSAGE_CLEAR
-  #define LCD_MESSAGE_CLEAR(x)
-  FORCE_INLINE void lcd_status() {};
+#define LCD_INIT
+#define LCD_STATUS
+#define LCD_MESSAGE(x)
+#define LCD_MESSAGEPGM(x)
+#define LCD_ALERTMESSAGEPGM(x)
+#define LCD_MESSAGE_CLEAR
+#define LCD_MESSAGE_CLEAR(x)
+FORCE_INLINE void lcd_status() {};
 
-  #define CLICKED false
-  #define BLOCK ;
+#define CLICKED false
+#define BLOCK ;
 //	void beep() {};
 
- 
-#endif 
-  
+#endif
+
 void lcd_statuspgm(const char* message, int priority = DEFAULT_MESSAGE_PRIORITY);
 void lcd_alertstatuspgm(const char* message);
 

@@ -230,6 +230,7 @@ void ResetMetrics()
 	extruder0_degree_seconds=0;
 	bed_degree_seconds=0;
 	total_filament=0;
+	EEPROM_StoreFrequentSettings();
 }
 
 void EEPROM_RetrieveSettings(bool def)

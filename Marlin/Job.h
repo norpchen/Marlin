@@ -11,7 +11,7 @@
 
 #include "Marlin.h"
 
-
+#include "stepper.h"
 class Job
 {
  private:
@@ -23,7 +23,10 @@ class Job
 	 unsigned long stoptime;
 	 unsigned long pausedtime;
 	 unsigned long last_time_estimate;
+	 float 	last_percent;
 	 int count;
+	 float speed;
+	 float last_z;
 	 // job metrics
 	 float job_start_filament;
 	 float job_distance[NUM_AXIS];
@@ -42,13 +45,15 @@ public:
 	unsigned long CalculateRemainingTime () ;
 	float Percent() const;
 	void SetPercent(float val);
-	void SetSDPercent(float val) { sdpercentage = val; }
+	void SetSDPercent(float val);
 	Job::JOBSTATE JobState() const { return jobstate; }
 	void SetJobState(Job::JOBSTATE val) { jobstate = val; }
 	float GetFilamentUsed() const;
 	void Update();
 	bool KnowPercentage () { return we_have_gcode_progress; }
 	float GetDistanceTravelled (int axis) const;
+	float Speed() const { if (current_block!=NULL) return current_block->nominal_speed; return 0.0;}
+
 };
 
 extern Job job;

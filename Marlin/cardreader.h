@@ -7,6 +7,23 @@
 enum LsAction {LS_SerialPrint,LS_Count,LS_GetFilename};
 class CardReader
 {
+	private:
+		SdFile root,*curDir,workDir,workDirParent,workDirParentParent;
+		Sd2Card card;
+		SdVolume volume;
+		SdFile file;
+		uint32_t filesize;
+		//int16_t n;
+		unsigned long autostart_atmillis;
+		uint32_t sdpos ;
+		unsigned long volsize;
+		bool autostart_stilltocheck; //the sd start is delayed, because otherwise the serial cannot answer fast enought to make contact with the hostsoftware.
+
+		LsAction lsAction; //stored for recursion.
+		int16_t nrFiles; //counter for the files in the current directory and recycled as position counter for getting the nrFiles'th name in the directory.
+		char* diveDirName;
+		void lsDive(const char *prepend,SdFile parent);
+
 public:
   CardReader();
   
@@ -34,6 +51,7 @@ public:
   void chdir(const char * relpath);
   void updir();
   void setroot();
+  unsigned long Volsize() const { return volsize; }
 
 
   bool isFileOpen();
@@ -52,22 +70,7 @@ public:
   char longFilename[LONG_FILENAME_LENGTH];
   bool filenameIsDir;
   int lastnr; //last number of the autostart;
-private:
-  SdFile root,*curDir,workDir,workDirParent,workDirParentParent;
-  Sd2Card card;
-  SdVolume volume;
-  SdFile file;
-  uint32_t filesize;
-  //int16_t n;
-  unsigned long autostart_atmillis;
-  uint32_t sdpos ;
 
-  bool autostart_stilltocheck; //the sd start is delayed, because otherwise the serial cannot answer fast enought to make contact with the hostsoftware.
-  
-  LsAction lsAction; //stored for recursion.
-  int16_t nrFiles; //counter for the files in the current directory and recycled as position counter for getting the nrFiles'th name in the directory.
-  char* diveDirName;
-  void lsDive(const char *prepend,SdFile parent);
 };
 extern CardReader card;
 #define IS_SD_PRINTING (card.sdprinting)
