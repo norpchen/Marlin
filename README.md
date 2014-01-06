@@ -4,9 +4,11 @@ Marlin code for other machines / options, so it may work well on other bots.
 
 I've made the following changes:
 
+* Look ahead for bang bang mode for the heated bed. Tracks rate of change and predicts when to enable / disable the heater.  Reduces the amount of oscillation.  Separate look ahead range for heating vs cooling.
 * Added support for the SainSmart I2C LCD2004 adapter for HD44780 LCD screens (this requires 
   Francisco Malpartida's LCD library, which replaces the existing Arduino LCD library.  It is 
   available at https://bitbucket.org/fmalpartida/new-liquidcrystal/wiki/Home)
+* ^^ REMOVED -- I2C was causing lockups.  I switched to an SPI OLED from Adafruit and everything is rock solid with no lock ups.
 * Context-sensitive status screen displays based on the printer's current mode / activity.  
   These only work on a 20x4 display -- the existing Marlin support for 16x2 displays is untouched.
 * Job progress tracking and dynamic estimated completion time  
@@ -39,6 +41,7 @@ Specific config.h settings I've changed for my bot:
 
 Things that have NOT changed from Lincomatic's version (unless noted above)
 * Movement and acceleration and stepper control logic
+* ^^ EXCEPT added support for Q codes in G1 commands.  Basically sets a scalar for Quality for each move command, where 1.0 is nominal, 0.5 is double speed 2.0 is half speed, etc.  This will scale speed, acceleration, and XY Jerk on a per move basis, allowing better speed for interiors and quality for exteriors.
 * Heater control
 * LCD menus
 
