@@ -14,7 +14,7 @@
 
 enum STATES
 {
-	IDLE,
+	IDLE=0,
 	PRINTING,
 	SAVING,
 	MOVING,
@@ -33,7 +33,7 @@ enum STATES
 
 enum CONTROLLER 
 {
-	PANEL,
+	PANEL=0,
 	SERIAL_HOST,
 	SDCARD,
 	MAX_CONTROLLERS
@@ -47,7 +47,7 @@ const char * const CONTROLLER_STRINGS[MAX_CONTROLLERS] =
 	"SD"
 };
 
-const char * const STATE_STRINGS[MAX_STATES]=
+const char STATE_STRINGS[MAX_STATES][10]=
 {
 	" IDLE   ",
 	"PRINTING",
@@ -60,8 +60,9 @@ const char * const STATE_STRINGS[MAX_STATES]=
 	" SLEEP  ",
 	" DONE   ",
 	" PAUSED ",
-	"PRINTRBOT" ,
-	""
+	"  ON  " ,
+	"  DEBUG "
+	
 };
 
 
@@ -78,6 +79,7 @@ class State
  public:
 	void init();
 	void Update ();
+	State() { init();} 
 	State & operator=(STATES newstate);
 	operator STATES() const { return current_state; }
 	CONTROLLER Controller() const { return controller; }

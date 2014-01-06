@@ -2,6 +2,7 @@
 #define ULTRALCD_H
 #include "Marlin.h"
 #include "Utility.h"
+#include  "Watchdog.h"
 
 
 #define LCD_UPDATE_INTERVAL 350
@@ -14,13 +15,17 @@
 #define DEFAULT_MESSAGE_PRIORITY 20
 
 #ifdef ULTRA_LCD
-#ifndef MCP23017_LCD
+
+
+
+
 #ifdef PCF8574T_LCD
 #include <LiquidCrystal_I2C.h>
-#else
+#endif
+#ifndef PCF8574T_LCD
 #include <LiquidCrystal.h>
 #endif
-#endif
+
 void lcd_status();
 void lcd_init();
 void lcd_status(const char* message, int priority=DEFAULT_MESSAGE_PRIORITY);
@@ -33,13 +38,25 @@ void buttons_check();
 
 #define STATUSTIMEOUT 15000
 
+
+#ifdef GFX_128x64_OLED
+#include <SPI.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+// extern Adafruit_SSD1306  lcd;
+#endif
+
+
 #ifdef MCP23017_LCD
 extern LiquidTWI2 lcd;
 #else
 #ifdef PCF8574T_LCD
 extern LiquidCrystal_I2C lcd;
 #else
+#ifndef GFX_128x64_OLED
 extern LiquidCrystal lcd;
+#endif
 #endif
 
 #endif
@@ -165,12 +182,15 @@ char *ftostr3(const float &x);*/
 #define LCD_MESSAGEPGM(x)
 #define LCD_ALERTMESSAGEPGM(x)
 #define LCD_MESSAGE_CLEAR
-#define LCD_MESSAGE_CLEAR(x)
+#define LCD_MESSAGEPRI(x,y) 
+#define LCD_MESSAGEPGMPRI(x,y)
+#define LCD_MESSAGE_CLEARPRI(x) 
+
 FORCE_INLINE void lcd_status() {};
 
 #define CLICKED false
 #define BLOCK ;
-//	void beep() {};
+	//void beep() {};
 
 #endif
 

@@ -1,4 +1,5 @@
 // Utility.h
+#pragma once
 
 #ifndef _UTILITY_h
 #define _UTILITY_h
@@ -24,7 +25,7 @@ char *ftostr32a(const float &x);
 char *ftostr(float x,int pre,int post, bool sign=false);
 char *itostr5(const int &xx);
 
-void SetLEDColor (byte r, byte g, byte b, bool fade=true);
+void SetStatusLEDColor (byte r, byte g, byte b, bool fade=true);
 
 unsigned long CalculateRemainingTime (float percent_complete,unsigned long elapsed_time);
 char* EchoTimeSpan (long t, bool shortform=false);

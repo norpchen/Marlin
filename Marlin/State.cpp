@@ -25,6 +25,10 @@ void State::init()
 	current_state = WELCOME;
 	controller  = PANEL;
 	last_block_refresh=-1;
+	progress_string[0] = "";
+	progress_string[1] = "";
+	progress_string[2] = "";
+//	Update();
 }
 
 //-------------------------------------------------------------------------------------------------------------------
@@ -105,6 +109,9 @@ void State::Update ()
 				progress_string[2]=EchoTimeSpan(now / 1000,true);
 				break;
 			}
+
+#if 0 
+			// random color flickering
 			if ((now & 0x3f) ==0) 
 		//	if (refresh_lcd_messages)
 			{
@@ -115,7 +122,11 @@ void State::Update ()
 			     int  b = max(v - r - g,0);
 				SetLEDColor(r,g,b, false);
 			}
-
+#endif
+			int v = (now>>2) & 0xff;
+			v = 255 * sin(3.141592*2.0*((now & 1023)/1024.0f));
+		//	v = 128+((signed char) v);
+			SetStatusLEDColor(255-v,v,v, false);
 		}
 		break;
 
@@ -203,7 +214,7 @@ void State::Update ()
 			if (current_state==SAVING)
 			{
 				int color = (gcode_N & 0x3)<<2;
-				SetLEDColor(color,color,color, false);
+				SetStatusLEDColor(color,color,color, false);
 			} 
 			else
 			{
@@ -211,7 +222,7 @@ void State::Update ()
 
 #ifdef SET_LED_COLOR_BY_ACTION
 				if (current_state!=HEATING) 
-					SetLEDColor(r,g,b,false);
+					SetStatusLEDColor(r,g,b,false);
 #endif
 			}
 
@@ -311,7 +322,7 @@ State & State::operator=( STATES newstate )
 #ifdef BLINK_M
 		BlinkM_playScript(BLINK_M_ADDR,BLINK_M_ERROR_SCRIPT,0,0);
 #else
-		SetLEDColor(ERROR_COLOR);
+		SetStatusLEDColor(ERROR_COLOR);
 #endif
 		break;
 
@@ -323,7 +334,7 @@ State & State::operator=( STATES newstate )
 #ifdef BLINK_M
 		BlinkM_playScript(BLINK_M_ADDR,BLINK_M_SLEEP_SCRIPT,0,0);
 #else
-		SetLEDColor(SLEEP_COLOR);
+		SetStatusLEDColor(SLEEP_COLOR);
 #endif
 		// deliberate roll thru case
 	case IDLE :

@@ -4,7 +4,7 @@
 #ifndef MARLIN_H
 #define MARLIN_H
 
-#define VERSION_STRING  "1.1.2"
+#define VERSION_STRING  "1.1.4"
 
 #define  HardwareSerial_h // trick to disable the standard HWserial
 
@@ -22,6 +22,7 @@
 #include <avr/eeprom.h>
 #include  <avr/wdt.h>
 #include  <avr/interrupt.h>
+#include <SPI.h>
 
 
 #if ARDUINO >= 100
@@ -224,6 +225,8 @@ extern float total_filament;
 void manage_other_tasks();
 void DisableAllSteppers();
 
+extern 	float BBLookAheadHot ;
+extern float BBLookAheadCool ;
 
 extern unsigned long now;			// cached value of millis() -- should be reasonably recent
 

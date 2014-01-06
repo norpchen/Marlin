@@ -44,7 +44,7 @@ inline void EEPROM_StoreFrequentSettings() ;
 // the default values are used whenever there is a change to the data, to prevent
 // wrong data being written to the variables.
 // ALSO:  always make sure the variables in the Store and retrieve sections are in the same order.
-#define EEPROM_VERSION "V08"
+#define EEPROM_VERSION "x13"
 
 void EEPROM_StoreSettings() ;
 

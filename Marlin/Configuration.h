@@ -15,8 +15,9 @@
 
 
 // This determines the communication speed of the printer
-#define BAUDRATE (250000*2)
-//#define BAUDRATE 115200
+//#define BAUDRATE (250000*1)
+#define BAUDRATE 115200
+//*2
 
 //// The following define selects which electronics board you have. Please choose the one that matches your setup
 // Gen7 custom (Alfons3 Version) = 10 "https://github.com/Alfons3/Generation_7_Electronics"
@@ -51,7 +52,7 @@
 #ifdef SDSUPPORT
 // when requesting an SD card status update from the host (M27) -- should it include % done and time estimate?
 #define SHOW_SD_PROGRESS_PERCENT true
-#define SPI_SPEED SPI_EIGHTH_SPEED 
+#define SPI_SPEED SPI_EIGHTH_SPEED
 // SPI_HALF_SPEED
 // SPI_FULL_SPEED = 0;
 // SPI_HALF_SPEED = 1;
@@ -65,7 +66,7 @@
 // save metrics like total print time to eeprom to track lifetime usage:  this will cause more writes to the flash EEPROM
 #define SAVE_DEVICE_METRICS
 
-// update the EEPROM with statistical metrics  (travel history, time on, etc) 
+// update the EEPROM with statistical metrics  (travel history, time on, etc)
 #define EEPROM_UPDATE_RATE 300  // five minutes -- which works out to  ~10 years at 100,000 write cycles for EEPROM life
 
 
@@ -99,12 +100,12 @@
 #define TEMP_SENSOR_0 99
 #define TEMP_SENSOR_1 0
 #define TEMP_SENSOR_2 0
-#define TEMP_SENSOR_BED 6
+#define TEMP_SENSOR_BED 1
 
 // Actual temperature must be close to target for this long before M109 returns success
 #define TEMP_RESIDENCY_TIME 4	// (seconds)
 #define TEMP_HYSTERESIS 3       // (degC) range of +/- temperatures considered "close" to the target one
-#define TEMP_WINDOW     1       // (degC) Window around target to start the recidency timer x degC early.
+#define TEMP_WINDOW     2       // (degC) Window around target to start the recidency timer x degC early.
 
 // The minimal temperature defines the temperature below which the heater will not be enabled It is used
 // to check that the wiring to the thermistor is not broken.
@@ -116,9 +117,9 @@
 
 // When temperature exceeds max temp, your heater will be switched off.
 // This feature exists to protect your hotend from overheating accidentally, but *NOT* from thermistor short/failure!
-#define HEATER_0_MAXTEMP 280
-#define HEATER_1_MAXTEMP 280
-#define HEATER_2_MAXTEMP 280
+#define HEATER_0_MAXTEMP 335
+#define HEATER_1_MAXTEMP 335
+#define HEATER_2_MAXTEMP 335
 #define BED_MAXTEMP 150
 
 // Add some cushioning to the max temperature before a panic stop
@@ -144,9 +145,9 @@
 
 // If you are using a preconfigured hotend then you can use one of the value sets by uncommenting it
 // Ultimaker
-#define  DEFAULT_Kp  22.2
-#define  DEFAULT_Ki 1.08
-#define  DEFAULT_Kd 114
+#define  DEFAULT_Kp  27.58
+#define  DEFAULT_Ki 1.45
+#define  DEFAULT_Kd 131.04
 
 // Makergear
 //    #define  DEFAULT_Kp 7.0
@@ -172,7 +173,7 @@
 // If this is enabled, find your own PID constants below.
 //#define PIDTEMPBED
 //
-//#define BED_LIMIT_SWITCHING
+// #define BED_LIMIT_SWITCHING
 
 // This sets the max power delived to the bed, and replaces the HEATER_BED_DUTY_CYCLE_DIVIDER option.
 // all forms of bed control obey this (PID, bang-bang, bang-bang with hysteresis)
@@ -204,7 +205,7 @@
 //if PREVENT_DANGEROUS_EXTRUDE is on, you can still disable (uncomment) very long bits of extrusion separately.
 #define PREVENT_LENGTHY_EXTRUDE
 
-#define EXTRUDE_MINTEMP 170
+#define EXTRUDE_MINTEMP 160
 #define EXTRUDE_MAXLENGTH (X_MAX_LENGTH+Y_MAX_LENGTH) //prevent extrusion of very large distances.
 
 //===========================================================================
@@ -237,10 +238,11 @@
 #endif
 
 // The pullups are needed if you directly connect a mechanical endswitch between the signal and ground pins.
-const bool X_ENDSTOPS_INVERTING = false; // set to true to invert the logic of the endstops.
-const bool Y_ENDSTOPS_INVERTING = false; // set to true to invert the logic of the endstops.
-const bool Z_ENDSTOPS_INVERTING = false; // set to true to invert the logic of the endstops.
-#define DISABLE_MAX_ENDSTOPS
+const bool X_ENDSTOPS_INVERTING = true; // set to true to invert the logic of the endstops.
+const bool Y_ENDSTOPS_INVERTING = true; // set to true to invert the logic of the endstops.
+const bool Z_MINENDSTOPS_INVERTING = false; // set to true to invert the logic of the endstops.
+const bool Z_MAXENDSTOPS_INVERTING = true; // set to true to invert the logic of the endstops.
+// #define DISABLE_MAX_ENDSTOPS
 
 // For Inverting Stepper Enable Pins (Active Low) use 0, Non Inverting (Active High) use 1
 #define X_ENABLE_ON 0
@@ -250,7 +252,7 @@ const bool Z_ENDSTOPS_INVERTING = false; // set to true to invert the logic of t
 
 // Disables axis when it's not being used.
 #define DISABLE_X false
-#define DISABLE_Y false
+#define DISABLE_Y true
 #define DISABLE_Z true
 #define DISABLE_E false // For all extruders
 
@@ -270,11 +272,11 @@ const bool Z_ENDSTOPS_INVERTING = false; // set to true to invert the logic of t
 #define min_software_endstops true //If true, axis won't move to coordinates less than HOME_POS.
 #define max_software_endstops true  //If true, axis won't move to coordinates greater than the defined lengths below.
 // Travel limits after homing
-#define X_MAX_POS 135 //205
+#define X_MAX_POS 260 //205
 #define X_MIN_POS 0
-#define Y_MAX_POS 120 //205
+#define Y_MAX_POS 260 //205
 #define Y_MIN_POS 0
-#define Z_MAX_POS 90
+#define Z_MAX_POS 260
 #define Z_MIN_POS 0
 
 #define X_MAX_LENGTH (X_MAX_POS - X_MIN_POS)
@@ -296,17 +298,17 @@ const bool Z_ENDSTOPS_INVERTING = false; // set to true to invert the logic of t
 
 // default settings
 
-#define DEFAULT_AXIS_STEPS_PER_UNIT   {80,80,3200,480}                    // default steps per unit for printrbot Jr with GT2 XY belts and M6 threaded Z rod 
-#define DEFAULT_MAX_FEEDRATE          {120, 120, 2, 20}    // (mm/sec)    
-#define DEFAULT_MAX_ACCELERATION      {900,900,10,5000}    // X, Y, Z, E maximum start speed for accelerated moves. E default values are good for skeinforge 40+, for older versions raise them a lot.
+#define DEFAULT_AXIS_STEPS_PER_UNIT   {80,80,3200,530}                    // default steps per unit for printrbot Jr with GT2 XY belts and M6 threaded Z rod 
+#define DEFAULT_MAX_FEEDRATE          {120, 120, 4, 30}    // (mm/sec)    
+#define DEFAULT_MAX_ACCELERATION      {500,500,5,50}    // X, Y, Z, E maximum start speed for accelerated moves. E default values are good for skeinforge 40+, for older versions raise them a lot.
 
 #define DEFAULT_ACCELERATION          500    // X, Y, Z and E max acceleration in mm/s^2 for printing moves 
 #define DEFAULT_RETRACT_ACCELERATION  500   // X, Y, Z and E max acceleration in mm/s^2 for r retracts
 
 //
 #define DEFAULT_XYJERK                10.0    // (mm/sec)
-#define DEFAULT_ZJERK                 0.4     // (mm/sec)
-#define DEFAULT_EJERK                 5.0    // (mm/sec)
+#define DEFAULT_ZJERK                 0.1     // (mm/sec)
+#define DEFAULT_EJERK                 1.0    // (mm/sec)
 
 //===========================================================================
 //=============================Additional Features===========================
@@ -328,10 +330,14 @@ const bool Z_ENDSTOPS_INVERTING = false; // set to true to invert the logic of t
 //#define SDSUPPORT // Enable SD Card Support in Hardware Console
 
 //#define ULTIMAKERCONTROLLER //as available from the ultimaker online store.
-#define ULTIPANEL  //the ultipanel as on thingiverse
+
+// #define ULTIPANEL  //the ultipanel as on thingiverse
+
 //#define PANUCATT_VIKI // Panucatt ViKi (formerly VersaPanel)
 
-#define PCF8574T_LCD  // SainSmart I2C LCD2004 adapter
+// #define PCF8574T_LCD  // SainSmart I2C LCD2004 and YwRobot adapter
+
+#define GFX_128x64_OLED
 
 
 #ifdef PANUCATT_VIKI
@@ -352,28 +358,45 @@ const bool Z_ENDSTOPS_INVERTING = false; // set to true to invert the logic of t
 #define NEWPANEL  //enable this if you have a click-encoder panel
 #define SDSUPPORT
 #define ULTRA_LCD
+
+
+
+#ifdef GFX_128x64_OLED
+#define LCD_WIDTH 20
+#define LCD_HEIGHT 6
+#else
 #define LCD_WIDTH 20
 #define LCD_HEIGHT 4
+
+#endif 
 
 // Preheat Constants
 #define PLA_PREHEAT_HOTEND_TEMP 200
 #define PLA_PREHEAT_HPB_TEMP 70
-#define PLA_PREHEAT_FAN_SPEED 190		// Insert Value between 0 and 255
+#define PLA_PREHEAT_FAN_SPEED 0		// Insert Value between 0 and 255
 
 #define ABS_PREHEAT_HOTEND_TEMP 240
-#define ABS_PREHEAT_HPB_TEMP 100
+#define ABS_PREHEAT_HPB_TEMP 110
 #define ABS_PREHEAT_FAN_SPEED 0		// Insert Value between 0 and 255
 
 #else //no panel but just lcd 
-	#ifdef PCF8574T_LCD
-		#define LCD_WIDTH 20
-		#define LCD_HEIGHT 4
-	#else
-		#ifdef ULTRA_LCD
-			#define LCD_WIDTH 16
-			#define LCD_HEIGHT 2
-		#endif
-	#endif
+#ifdef PCF8574T_LCD
+#define LCD_WIDTH 20
+#define LCD_HEIGHT 4
+#else
+#ifdef GFX_128x64_OLED
+#define LCD_WIDTH 20
+#define LCD_HEIGHT 6
+#endif 
+
+#ifdef ULTRA_LCD
+#ifndef LCD_WIDTH
+#define LCD_WIDTH 16
+#define LCD_HEIGHT 2
+#endif
+#endif
+#endif
+
 #endif
 
 // Increase the FAN pwm frequency. Removes the PWM noise but increases heating in the FET/Arduino
@@ -387,20 +410,21 @@ const bool Z_ENDSTOPS_INVERTING = false; // set to true to invert the logic of t
 //#define SF_ARC_FIX
 
 #define BLINK_M
+#ifdef BLINK_M
 
 #define BLINK_M_ADDR 0x09
 
 // built in scripts
 #define BLINK_M_SCRIPT_DEFAULT			0		// white?red?green?blue?off
 #define BLINK_M_SCRIPT_RGB				1		// RGB red?green?blue
-#define BLINK_M_SCRIPT_WHITE_FLASH		2		
-#define BLINK_M_SCRIPT_RED_FLASH		3		
-#define BLINK_M_SCRIPT_GREEN_FLASH		4		
-#define BLINK_M_SCRIPT_BLUE_FLASH		5		
-#define BLINK_M_SCRIPT_CYAN_FLASH		6		
-#define BLINK_M_SCRIPT_MAGNETA_FLASH	7		
-#define BLINK_M_SCRIPT_YELLOW_FLASH		8		
-#define BLINK_M_SCRIPT_OFF				9		
+#define BLINK_M_SCRIPT_WHITE_FLASH		2
+#define BLINK_M_SCRIPT_RED_FLASH		3
+#define BLINK_M_SCRIPT_GREEN_FLASH		4
+#define BLINK_M_SCRIPT_BLUE_FLASH		5
+#define BLINK_M_SCRIPT_CYAN_FLASH		6
+#define BLINK_M_SCRIPT_MAGNETA_FLASH	7
+#define BLINK_M_SCRIPT_YELLOW_FLASH		8
+#define BLINK_M_SCRIPT_OFF				9
 #define BLINK_M_SCRIPT_HUE_CYCLE		10		// red?yellow?green?cyan?blue?purple
 #define BLINK_M_SCRIPT_MOODLIGHT		11		// random hue?random hue
 #define BLINK_M_SCRIPT_CANDLE			12		// random yellows
@@ -420,19 +444,20 @@ const bool Z_ENDSTOPS_INVERTING = false; // set to true to invert the logic of t
 #define BLINK_M_COOLING_SCRIPT		BLINK_M_SCRIPT_WATER
 #define BLINK_M_WELCOME_SCRIPT		BLINK_M_SCRIPT_CYAN_FLASH
 #define BLINK_M_IDLE_SCRIPT		    BLINK_M_SCRIPT_MAGNETA_FLASH
-
-#define RED 255,0,0
-#define YELLOW 255,255,0
-#define GREEN 0,255,0
-#define BLUE 0,0,255
-#define WHITE 255,255,255
-#define OFF 0,0,0
-#define ERROR_COLOR RED
+#endif
+#define LED_COLOR_RED 255,0,0
+#define LED_COLOR_YELLOW 255,255,0
+#define LED_COLOR_GREEN 0,255,0
+#define LED_COLOR_BLUE 0,0,255
+#define LED_COLOR_WHITE 255,255,255
+#define LED_COLOR_OFF 0,0,0
+#define ERROR_COLOR LED_COLOR_RED
 #define STOP_COLOR 20,20,20
-#define SLEEP_COLOR OFF 
-#define WARNING_COLOR YELLOW
+#define SLEEP_COLOR LED_COLOR_OFF
+#define WARNING_COLOR LED_COLOR_YELLOW
 
 #include "Configuration_adv.h"
 #include "thermistortables.h"
+
 
 #endif //__CONFIGURATION_H

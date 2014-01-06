@@ -8,7 +8,7 @@
 #ifdef BED_LIMIT_SWITCHING
   #define BED_HYSTERESIS 2 //only disable heating if T>target+BED_HYSTERESIS and enable heating if T>target-BED_HYSTERESIS
 #endif
-#define BED_CHECK_INTERVAL 5000 //ms between checks in bang-bang control
+#define BED_CHECK_INTERVAL 2000 //ms between checks in bang-bang control
 
 //// Heating sanity check:
 // This waits for the watchperiod in milliseconds whenever an M104 or M109 increases the target temperature
@@ -71,7 +71,7 @@
 // This defines the number of extruders
 #define EXTRUDERS 1
 
-#define ENDSTOPS_ONLY_FOR_HOMING // If defined the endstops will only be used for homing
+// #define ENDSTOPS_ONLY_FOR_HOMING // If defined the endstops will only be used for homing
 
 
 //// AUTOSET LOCATIONS OF LIMIT SWITCHES
@@ -136,9 +136,9 @@
 #endif
 
 //homing hits the endstop, then retracts by this distance, before it tries to slowly bump again:
-#define X_HOME_RETRACT_MM 5 
-#define Y_HOME_RETRACT_MM 5 
-#define Z_HOME_RETRACT_MM 1 
+#define X_HOME_RETRACT_MM 10 
+#define Y_HOME_RETRACT_MM 10 
+#define Z_HOME_RETRACT_MM 2 
 #define QUICK_HOME  //if this is defined, if both x and y are to be homed, a diagonal move will be performed initially.
 
 #define AXIS_RELATIVE_MODES {false, false, false, false}
@@ -188,7 +188,7 @@
 #ifdef USE_WATCHDOG
   // you cannot reboot on a mega2560 due to a bug in he bootloader. Hence, you have to reset manually, and this is done hereby:
 //#define RESET_MANUAL
-#define WATCHDOG_TIMEOUT 10  //seconds
+#define WATCHDOG_TIMEOUT 20  //seconds
 #endif
 
 // extruder advance constant (s2/mm3)
@@ -231,16 +231,16 @@ const int dropsegments=3; //everything with less than this number of steps will 
 
 // The number of linear motions that can be in the plan at any give time.  
 // THE BLOCK_BUFFER_SIZE NEEDS TO BE A POWER OF 2, i.g. 8,16,32 because shifts and ors are used to do the ringbuffering.
-#if defined SDSUPPORT
-  #define BLOCK_BUFFER_SIZE 32   // SD,LCD,Buttons take more memory, block buffer needs to be smaller
-#else
-  #define BLOCK_BUFFER_SIZE 16 // maximize block buffer
-#endif
+//#if defined SDSUPPORT
+  #define BLOCK_BUFFER_SIZE 16//32   // SD,LCD,Buttons take more memory, block buffer needs to be smaller
+//#else
+//  #define BLOCK_BUFFER_SIZE 16 // maximize block buffer
+//#endif
 
 
 //The ASCII buffer for recieving from the serial:
-#define MAX_CMD_SIZE 80
-#define BUFSIZE 4
+#define MAX_CMD_SIZE 120
+#define BUFSIZE 8
 
 
 // Firmware based and LCD controled retract

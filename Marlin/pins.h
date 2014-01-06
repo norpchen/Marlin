@@ -933,11 +933,53 @@
 #define MOTHERBOARD 81
 #define KNOWN_BOARD 1
 
+
+// I2C
+#define AVAILABLE_PIN_D0 0 // digital i/o pin 0  -- defined as SCL / INT 0 -- header JP2 pin 1
+#define AVAILABLE_PIN_D1 1 // digital i/o pin 1  -- defined as SDA / INT 1 -- header JP2 pin 3
+
+// UART
+#define AVAILABLE_PIN_D2 2 // digital i/o pin 2  -- defined as RX1 / INT 2 -- header JP2 pin 5
+#define AVAILABLE_PIN_D3 3 // digital i/o pin 3  -- defined as TX1 / INT 3 -- header JP2 pin 7
+
+// general digital I/O
+#define AVAILABLE_PIN_D4 4 // digital i/o pin 4 -- header Jp11 pin 5 (ICP1)
+#define AVAILABLE_PIN_D5 5 // digital i/o pin 5 -- header Jp11 pin 6 (XCK1)
+#define AVAILABLE_PIN_D6 6 // digital i/o pin 6 -- header Jp11 pin 7 (T0)
+#define AVAILABLE_PIN_D7 7 // digital i/o pin 7 -- header Jp11 pin 8 (T1)
+#define AVAILABLE_PIN_E0 8 // digital i/o pin 8 -- header Jp11 pin 10 (RD)
+#define AVAILABLE_PIN_E1 9 // digital i/o pin 9 -- header Jp11 pin 11 (WR)
+#define AVAILABLE_PIN_C0 10 // A8  --  -- header JP11 pin 12
+#define AVAILABLE_PIN_C1 11 // A9  --  -- header JP11 pin 13
+#define AVAILABLE_PIN_C2 12 // A10 -- -- header JP11 pin 14
+
+
+#define WATCHDOG_HEARTBEAT_PIN AVAILABLE_PIN_E0
+// 6 analog pins:
+// these are also analog 4,5,6,7
+#define AVAILABLE_PIN_F4 42  // ADC4 -- defined as TCK --  header JP2 pin 6 
+#define AVAILABLE_PIN_F5 43  // ADC5 -- defined as TMS --  header JP2 pin 8 
+#define AVAILABLE_PIN_F6 44  // ADC6 -- defined as TD0 --  header JP2 pin 10
+#define AVAILABLE_PIN_F7 45  // ADC7 -- defined as TD1 --  header JP2 pin 12 
+
+#define AVAILABLE_PIN_PF2 40  // AD2 -  header JP2 pin 2
+#define AVAILABLE_PIN_PF3 41  // AD3 --  header JP2 pin 4
+// also as
+#define AVAILABLE_PIN_ANALOG2_F2 2  // AD2 -  header JP2 pin 2
+#define AVAILABLE_PIN_ANALOG2_F3 3  // AD3 -  header JP2 pin 2
+#define AVAILABLE_PIN_ANALOG2_F4 4  // AD2 -  header JP2 pin 2
+#define AVAILABLE_PIN_ANALOG2_F5 5  // AD3 -  header JP2 pin 2
+#define AVAILABLE_PIN_ANALOG2_F6 6  // AD2 -  header JP2 pin 2
+#define AVAILABLE_PIN_ANALOG2_F7 7  // AD3 -  header JP2 pin 2
+
+#define SPI_DISPLAY_CS 5
+
+
 #define X_STEP_PIN         28
 #define X_DIR_PIN          29
 #define X_ENABLE_PIN       19
-#define X_MIN_PIN          47
-#define X_MAX_PIN          -1
+#define X_MAX_PIN          47
+#define X_MIN_PIN         AVAILABLE_PIN_C2
 
 #define Y_STEP_PIN         30
 #define Y_DIR_PIN          31
@@ -945,13 +987,13 @@
 #define Y_MIN_PIN           37    // changed from 20 -- swap Estop and Ystop
 // 20 is conflicting with the SD card enable, don't use it (was Y stop)
 
-#define Y_MAX_PIN          -1
+#define Y_MAX_PIN          AVAILABLE_PIN_C0
 
 #define Z_STEP_PIN         32
 #define Z_DIR_PIN          33
 #define Z_ENABLE_PIN       17
 #define Z_MIN_PIN          36
-#define Z_MAX_PIN          -1
+#define Z_MAX_PIN          AVAILABLE_PIN_C1
 
 #define E0_STEP_PIN         34
 #define E0_DIR_PIN          35
@@ -973,7 +1015,8 @@
 #define LED_PIN            -1
 #define PS_ON_PIN          -1
 #define KILL_PIN           -1
-#define SDCARDDETECT -1
+#define SDCARDDETECT		 -1
+
 #ifndef SDSUPPORT
 // SPI library -- available on JP4 (ISP) header
 
@@ -991,43 +1034,7 @@
 // cross reference pin #s in fastio.h
 // digital pins
 
-// I2C
-#define AVAILABLE_PIN_D0 0 // digital i/o pin 0  -- defined as SCL / INT 0 -- header JP2 pin 1
-#define AVAILABLE_PIN_D1 1 // digital i/o pin 1  -- defined as SDA / INT 1 -- header JP2 pin 3
-
-// UART
-#define AVAILABLE_PIN_D2 2 // digital i/o pin 2  -- defined as RX1 / INT 2 -- header JP2 pin 5
-#define AVAILABLE_PIN_D3 3 // digital i/o pin 3  -- defined as TX1 / INT 3 -- header JP2 pin 7
-
-// general digital I/O
-#define AVAILABLE_PIN_D4 4 // digital i/o pin 4 -- header Jp11 pin 5 (ICP1)
-#define AVAILABLE_PIN_D5 5 // digital i/o pin 5 -- header Jp11 pin 6 (XCK1)
-#define AVAILABLE_PIN_D6 6 // digital i/o pin 6 -- header Jp11 pin 7 (T0)
-#define AVAILABLE_PIN_D7 7 // digital i/o pin 7 -- header Jp11 pin 8 (T1)
-#define AVAILABLE_PIN_E0 8 // digital i/o pin 8 -- header Jp11 pin 10 (RD)
-#define AVAILABLE_PIN_E1 9 // digital i/o pin 9 -- header Jp11 pin 11 (WR)
-#define AVAILABLE_PIN_C0 10 // A8  --  -- header JP11 pin 12
-#define AVAILABLE_PIN_C1 11 // A9  --  -- header JP11 pin 13
-#define AVAILABLE_PIN_C2 12 // A10 -- -- header JP11 pin 14
-
-// 6 analog pins:
-// these are also analog 4,5,6,7
-#define AVAILABLE_PIN_F4 42  // ADC4 -- defined as TCK --  header JP2 pin 6 
-#define AVAILABLE_PIN_F5 43  // ADC5 -- defined as TMS --  header JP2 pin 8 
-#define AVAILABLE_PIN_F5 44  // ADC6 -- defined as TD0 --  header JP2 pin 10
-#define AVAILABLE_PIN_F5 45  // ADC7 -- defined as TD1 --  header JP2 pin 12 
-
-#define AVAILABLE_PIN_PF2 40  // AD2 -  header JP2 pin 2
-#define AVAILABLE_PIN_PF3 41  // AD3 --  header JP2 pin 4
-// also as
-#define AVAILABLE_PIN_ANALOG2_F2 2  // AD2 -  header JP2 pin 2
-#define AVAILABLE_PIN_ANALOG2_F3 3  // AD3 -  header JP2 pin 2
-#define AVAILABLE_PIN_ANALOG2_F4 4  // AD2 -  header JP2 pin 2
-#define AVAILABLE_PIN_ANALOG2_F5 5  // AD3 -  header JP2 pin 2
-#define AVAILABLE_PIN_ANALOG2_F6 6  // AD2 -  header JP2 pin 2
-#define AVAILABLE_PIN_ANALOG2_F7 7  // AD3 -  header JP2 pin 2
-
-#define TONE_PIN -1 //AVAILABLE_PIN_C1
+#define TONE_PIN 3 //AVAILABLE_PIN_C1
 #define STATUS_LED_PIN -1 //AVAILABLE_PIN_C2
 
 
@@ -1044,7 +1051,7 @@
 
 #ifdef NEWPANEL
 //arduino pin which triggers an piezzo beeper
-#define BEEPER AVAILABLE_PIN_C2			// Beeper on AUX-4
+#define BEEPER -1 //AVAILABLE_PIN_C2			// Beeper on AUX-4
 
 #ifndef MCP28017_LCD
 #define LCD_PINS_RS 16
@@ -1056,10 +1063,10 @@
 #endif // MCP28017_LCD
 
 //buttons are directly attached using AUX-2
-#define BTN_EN1 AVAILABLE_PIN_D6 // PC1
-#define BTN_EN2 AVAILABLE_PIN_D4 // PC2
+#define BTN_EN1 AVAILABLE_PIN_F4 // PC1
+#define BTN_EN2 AVAILABLE_PIN_F5 // PC2
 #ifndef PANUCATT_VIKI
-#define BTN_ENC AVAILABLE_PIN_E1  //the click
+#define BTN_ENC AVAILABLE_PIN_F6  //the click
 #endif
 
 #define BLEN_C 2

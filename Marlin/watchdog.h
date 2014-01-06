@@ -1,6 +1,19 @@
 #ifndef WATCHDOG_H
 #define WATCHDOG_H
 
+
+/* Locals */
+
+extern const char *lastvisit;// __attribute__ ((section (".noinit")));
+
+/* http://gcc.gnu.org/onlinedocs/cpp/Stringification.html */
+#define VISITSTR1(fn, ln) ;
+ // VISITSTR2(fn, ln)
+#define VISITSTR2(fn, ln)  ;
+ // fn ":" #ln
+#define VISIT ;
+//(lastvisit = VISITSTR1(__FILE__, __LINE__)) 
+
 #include "Marlin.h"
 
 #ifdef USE_WATCHDOG
